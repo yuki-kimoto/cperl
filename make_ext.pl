@@ -6,6 +6,7 @@ use constant{IS_CROSS => defined $Config::Config{usecrosscompile} ? 1 : 0,
              IS_WIN32 => $^O eq 'MSWin32',
              IS_VMS   => $^O eq 'VMS',
              IS_UNIX  => $^O ne 'MSWin32' && $^O ne 'VMS',
+             SILENT   => (defined $ENV{MAKEFLAGS} and $ENV{MAKEFLAGS} =~ /\b(s|silent|quiet)\b/) ? 1 : 0,
 };
 
 my @ext_dirs = qw(cpan dist ext);
@@ -656,7 +657,8 @@ sub just_pm_to_blib {
     die "Inconsistent module $mname has both lib/ and $first/"
         if $has_lib && $has_topdir;
 
-    print "\nRunning pm_to_blib for $ext_dir directly\n";
+    print "\nRunning pm_to_blib for $ext_dir directly\n"
+      unless SILENT;
 
     my %pm;
     if ($has_top) {
