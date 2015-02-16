@@ -6,7 +6,7 @@ BEGIN {
     set_up_inc('../lib');
 }
 
-plan(tests => 57);
+plan(tests => 59);
 
 sub empty_sub {}
 
@@ -303,7 +303,6 @@ pass("RT #126845: stub with prototype, then definition with attribute");
     ::is($destroyed, 1, "RT124156 freed cv");
 }
 
-
 # check that return pops extraneous stuff from the stack
 
 sub check_ret {
@@ -338,3 +337,18 @@ is(join('-', 10, check_ret(5,6,7,8,9)), "10-25-26-27-28-29", "check_ret(5,6,7,8,
 
 is(join('-', 10, check_ret(-1)),        "10",  "check_ret(-1) list");
 is(join('-', 10, check_ret(-1,5)),      "10",  "check_ret(-1,5) list");
+
+# when a sub has my(...)=@_ replaced with an OP_SIGNATURE, make sure
+# it handles odd-numbered hash assignments correctly
+{
+    sub fake_sig {
+        my ($a, %h) = @_;
+        "$a:" . join('-', map $_ // 'undef', %h);
+    }
+    my $w = '';
+    local $SIG{__WARN__} = sub { $w .= $_[0] };
+    is fake_sig(1,"foo"), "1:foo-undef",
+            "fake sig shouldnt croak on odd hash assign";
+    like $w, qr/Odd number of elements in hash assignment/,
+            "fake sig should warn on odd hash assign";
+}
