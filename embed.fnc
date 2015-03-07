@@ -2586,6 +2586,11 @@ pn	|Malloc_t	|mem_log_realloc	|const UV n|const UV typesize|NN const char *type_
 pn	|Malloc_t	|mem_log_free	|Malloc_t oldalloc|NN const char *filename|const int linenumber|NN const char *funcname
 #endif
 
+#if defined(PERL_IN_XSUTILS_C)
+XEpR	|SV*	|carp_longmess |I32 ax|NN SV *errsv
+XEpR	|SV *	|carp_shortmess|I32 ax|NN SV *errsv
+#endif
+
 #if defined(PERL_IN_NUMERIC_C)
 #ifndef USE_QUADMATH
 sn	|NV|mulexp10	|NV value|I32 exponent
