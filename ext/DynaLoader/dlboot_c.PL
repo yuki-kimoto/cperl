@@ -221,6 +221,7 @@ print OUT line_prefix(__LINE__, <<'EOT');
         XPUSHs(newSVpvs("DynaLoader"));
         PUTBACK;
         call_pv("boot_DynaLoader", G_DISCARD);
+        /* SP = PL_stack_base + POPMARK; */
     }
 #ifdef DEBUGGING
     if (dl_debug) {
@@ -236,14 +237,15 @@ XS(XS_DynaLoader_bootstrap_inherit)
 {
     dXSARGS;
     AV* isa;
-    if (items < 1 || !SvPOK(TOPs))
+
+    if (items < 1 || !SvPOK(ST(0)))
         Perl_die(aTHX_ "Usage: DynaLoader::bootstrap_inherit($packagename [, $VERSION])\n");
     {
-        SV *module_isa = pv_copy(TOPs);
+        SV *module_isa = pv_copy(ST(0));
         char *s;
         sv_catpvs(module_isa, "::ISA");
         s = SvPVX(module_isa);
-	DLDEBUG(2,PerlIO_printf(Perl_debug_log, "DynaLoader::bootstrap_inherit '%s'\n", TOPpx));
+	DLDEBUG(2,PerlIO_printf(Perl_debug_log, "DynaLoader::bootstrap_inherit '%s' %d args\n", TOPpx, items));
 	ENTER_with_name("bootstrap");
         SAVETMPS;
         if ((isa = get_av(s, GV_ADDMULTI))) {
@@ -256,6 +258,7 @@ XS(XS_DynaLoader_bootstrap_inherit)
             DLDEBUG(2,PerlIO_printf(Perl_debug_log, "@%s=(%s)\n", s, av_tostr(isa)));
             SAVEFREESV(isa);
         }
+        PUSHMARK(SP);
         items = call_pv("DynaLoader::bootstrap", GIMME);
         FREETMPS;
         LEAVE_with_name("bootstrap");
@@ -273,33 +276,11 @@ XS(XS_DynaLoader_bootstrap)
     SV *xs = NULL;
     I32 nret;
 
-    if (items < 1 || !SvPOK(TOPs))
+    DLDEBUG(2,PerlIO_printf(Perl_debug_log, "DynaLoader::bootstrap '%s' %d args\n", SvPVX(ST(0)), items));
+    if (items < 1 || !SvPOK(ST(0)))
         Perl_die(aTHX_ "Usage: DynaLoader::bootstrap($packagename [ ,$VERSION ])\n");
-    module = TOPs;
+    module = ST(0);
 
-#if 1
-    /* XXX HACK! */
-    if (items > 1) {
-        if (SvPOK(module)) {
-            modulename = SvPVX(module);
-            if (modulename[0] >= '0' && modulename[0] <= '9' && SvPOK(ST(-1))) {
-                DLDEBUG(1,PerlIO_printf(Perl_debug_log,
-                              "!! DynaLoader::bootstrap stack corruption. wrong package \"%s\"\n",
-                              modulename));
-                goto hack;
-            }
-        }
-        else if (SvNOK(module) && SvPOK(ST(-1))) {
-            DLDEBUG(1,PerlIO_printf(Perl_debug_log, "!! DynaLoader::bootstrap stack corruption %g\n",
-                                    TOPn));
-          hack:
-            SP--;
-            module = TOPs;
-            DLDEBUG(1,PerlIO_printf(Perl_debug_log, "!! DynaLoader::bootstrap module %s\n",
-                                    TOPpx));
-        }
-    }
-#endif
     modulename = SvPVX(module);
     dl_load_file = get_cv("DynaLoader::dl_load_file", 0);
     if (!dl_load_file) {
