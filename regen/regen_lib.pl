@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-use strict;
-use vars qw($Needs_Write $Verbose @Changed $TAP);
+#use strict;
+#use vars qw($Needs_Write $Verbose @Changed $TAP);
 use File::Compare;
 use Symbol;
 use Text::Wrap();

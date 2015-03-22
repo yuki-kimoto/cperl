@@ -1,0 +1,77 @@
+%{
+/*
+  Copyright (C) 2015, cPanel Inc
+
+=head1 NAME
+
+ext/warnings/warnings.in - gperf input for warnings.c
+
+=head1 DESCRIPTION
+
+Generated warnings hash
+
+- perl -F'/;/' -alne'print "$F[10],\t0x$F[0]" if $F[1] eq "<control>" and $F[10]' \
+    UnicodeData.txt >> regen/warnings.in
+
+- gperf --output-file=ext/warnings.c regen/warnings_c.in
+
+- manual cleanup for inline and codingstd_tests via F<regen/warnings.pl>
+
+=over 4
+
+=item C<struct Perl_warnings>
+
+Generated hash table with name, offsets, bits and deadbits.
+
+=back
+
+=head2 Functions
+
+=over 4
+
+=item C<static unsigned int Perl_warnings_hash(register const char *str,
+register unsigned int len)>
+
+=item C<const struct Perl_warnings * Perl_warnings_lookup(register const
+char *str, register unsigned int len)>
+
+Generated lookup function.
+
+=back
+
+=cut
+
+*/
+
+#define PERL_NO_GET_CONTEXT
+#define PERL_EXT
+#include "EXTERN.h"
+#include "perl.h"
+#include "XSUB.h"
+
+#define BYTES 67
+
+const struct Perl_warnings *
+Perl_warnings_lookup(register const char *str, register unsigned int len);
+%}
+%language=ANSI-C
+%struct-type
+%define hash-function-name   Perl_warnings_hash
+%define lookup-function-name Perl_warnings_lookup
+%readonly-tables
+%null-strings
+%pic
+
+struct Perl_warnings {
+       int name,
+       const unsigned byte offset,
+       const char[BYTES] bits,
+       const char[BYTES] deadbits,
+};
+%%
+KEYWORDS
+%%
+
+/*
+ * vim: expandtab shiftwidth=4 cinoptions='\:2=2' :
+ */
