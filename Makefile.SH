@@ -938,7 +938,7 @@ lib/buildcustomize.pl: $& $(mini_obj) write_buildcustomize.pl
 
 	$spitshell >>$Makefile <<'!NO!SUBS!'
 
-$(PERL_EXE): $& perlmain$(OBJ_EXT) $(LIBPERL) $(static_ext) ext.libs $(PERLEXPORT) write_buildcustomize.pl
+$(PERL_EXE): $& perlmain$(OBJ_EXT) $(LIBPERL) $(static_ext) $(boot_ext) ext.libs $(PERLEXPORT) write_buildcustomize.pl
 	-@rm -f miniperl.xok
 !NO!SUBS!
 
@@ -1214,6 +1214,25 @@ manicheck:	FORCE
 
 $(DYNALOADER) $(DL_SRC): $(MINIPERL_EXE) lib/buildcustomize.pl preplibrary FORCE $(nonxs_ext)
 	$(MINIPERL) make_ext.pl $@ $(MAKE_EXT_ARGS) MAKE="$(MAKE)" LIBPERL_A=$(LIBPERL) LINKTYPE=static $(STATIC_LDFLAGS)
+
+boot_ext = lib/auto/warnings/warnings$(DLSUFFIX)
+# lib/auto/Config/Config$(DLSUFFIX)
+# lib/auto/utf8/utf8$(DLSUFFIX)
+
+$(boot_ext): $(DYNALOADER)
+
+lib/warnings/register.pm : ext/warnings/register.pm
+	mkdir -p lib/warnings/
+	cp ext/warnings/register.pm lib/warnings/
+
+lib/warnings.pm : ext/warnings/warnings.boot
+	cp ext/warnings/warnings.boot lib/warnings.pm
+
+lib/auto/warnings/warnings$(DLSUFFIX) : lib/warnings.pm lib/warnings/register.pm $(MINIPERL_EXE) lib/buildcustomize.pl preplibrary makeppport $(DYNALOADER) FORCE $(PERLEXPORT) $(LIBPERL)
+	$(MINIPERL) -Ilib -Ilib/auto ext/warnings/warnings_xs.PL
+	$(MINIPERL) -Ilib -Ilib/auto lib/ExtUtils/xsubpp -noprototypes -typemap lib/ExtUtils/typemap \
+		ext/warnings/warnings.xs > ext/warnings/warnings.c
+	@`$(CCCMD)` $(LDDLFLAGS) ext/warnings/warnings.c -o $@
 
 d_dummy $(dynamic_ext):	$(MINIPERL_EXE) lib/buildcustomize.pl preplibrary makeppport $(DYNALOADER) FORCE $(PERLEXPORT) $(LIBPERL)
 	$(MINIPERL) make_ext.pl $@ $(MAKE_EXT_ARGS) MAKE="$(MAKE)" LIBPERL_A=$(LIBPERL) LINKTYPE=dynamic
