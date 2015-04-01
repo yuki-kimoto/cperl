@@ -20,6 +20,12 @@ $VERSION = '2.00';
 
 BEGIN {
     push @INC, 'lib', 'ext/warnings';
+    # fix this for non-core: close_and_rename, read_only_bottom_close_and_rename
+    # for now do this only from root.
+    # TODO from ext/warnings, and install warnings.h into CORE
+    if (! -d 'ext/warnings' and -f 'warnings_xs.PL') {
+        chdir '../..';
+    }
     require 'regen/regen_lib.pl';
 }
 use strict ;
@@ -123,7 +129,6 @@ my %list ;
 my %Value ;
 my %ValueToName ;
 my %NameToValue ;
-
 my %v_list = () ;
 
 sub valueWalk
