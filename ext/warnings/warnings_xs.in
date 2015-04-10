@@ -56,9 +56,6 @@ int _chk(U32 flags, SV** mark, I32 items) {
   return 1;
 }
 
-const struct Perl_warnings *
-Perl_warnings_lookup(register const char *str, register unsigned int len);
-
 %}
 %language=ANSI-C
 %struct-type
@@ -68,12 +65,7 @@ Perl_warnings_lookup(register const char *str, register unsigned int len);
 %null-strings
 %pic
 
-struct Perl_warnings {
-  int name;
-  const unsigned char offset;
-  const char* bits;
-  const char* deadbits;
-};
+struct Perl_warnings { int name; const unsigned char offset; const char* bits; const char* deadbits; };
 %%
 all, 0, "\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55", "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa"
 closure, 2, "\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -198,8 +190,7 @@ CODE:
     XSRETURN_UNDEF;
 
 void
-register_categories (names, ...)
-   AV* names
+register_categories (...)
 CODE:
+    AV* names;
     XSRETURN_UNDEF;
-

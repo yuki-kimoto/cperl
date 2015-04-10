@@ -1159,7 +1159,7 @@ CHMOD_W = chmod +w
 #	embed.pl:	proto.h embed.h embedvar.h perlapi.h perlapi.c
 #	opcode.pl:	opcode.h opnames.h pp_proto.h
 #	regcomp.pl:	regnodes.h
-#	warnings.pl:	warnings.h lib/warnings.pm
+#	ext/warnings/warnings_xs.PL:	warnings.h ext/warnings/warnings.xs
 #	feature.pl:	feature.h lib/feature.pm
 # The correct versions should be already supplied with the perl kit,
 # in case you don't have perl available.
@@ -1226,13 +1226,14 @@ lib/warnings/register.pm : ext/warnings/register.pm
 	cp ext/warnings/register.pm lib/warnings/
 
 lib/warnings.pm : ext/warnings/warnings.boot
-	cp ext/warnings/warnings.boot lib/warnings.pm
+	cp -f ext/warnings/warnings.boot lib/warnings.pm
 
 lib/auto/warnings/warnings$(DLSUFFIX) : lib/warnings.pm lib/warnings/register.pm $(MINIPERL_EXE) lib/buildcustomize.pl preplibrary makeppport $(DYNALOADER) FORCE $(PERLEXPORT) $(LIBPERL)
 	$(MINIPERL) -Ilib -Ilib/auto ext/warnings/warnings_xs.PL
 	$(MINIPERL) -Ilib -Ilib/auto lib/ExtUtils/xsubpp -noprototypes -typemap lib/ExtUtils/typemap \
 		ext/warnings/warnings.xs > ext/warnings/warnings.c
 	@`$(CCCMD)` $(LDDLFLAGS) ext/warnings/warnings.c -o $@
+	cp -f ext/warnings/warnings.pm lib/warnings.pm
 
 d_dummy $(dynamic_ext):	$(MINIPERL_EXE) lib/buildcustomize.pl preplibrary makeppport $(DYNALOADER) FORCE $(PERLEXPORT) $(LIBPERL)
 	$(MINIPERL) make_ext.pl $@ $(MAKE_EXT_ARGS) MAKE="$(MAKE)" LIBPERL_A=$(LIBPERL) LINKTYPE=dynamic
