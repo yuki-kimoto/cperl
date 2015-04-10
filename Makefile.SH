@@ -1229,6 +1229,7 @@ lib/warnings.pm : ext/warnings/warnings.boot
 	cp -f ext/warnings/warnings.boot lib/warnings.pm
 
 lib/auto/warnings/warnings$(DLSUFFIX) : lib/warnings.pm lib/warnings/register.pm $(MINIPERL_EXE) lib/buildcustomize.pl preplibrary makeppport $(DYNALOADER) FORCE $(PERLEXPORT) $(LIBPERL)
+	cp -f ext/warnings/warnings.boot lib/warnings.pm
 	$(MINIPERL) -Ilib -Ilib/auto ext/warnings/warnings_xs.PL
 	$(MINIPERL) -Ilib -Ilib/auto lib/ExtUtils/xsubpp -noprototypes -typemap lib/ExtUtils/typemap \
 		ext/warnings/warnings.xs > ext/warnings/warnings.c

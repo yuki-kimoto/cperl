@@ -52,8 +52,92 @@ Generated lookup function.
 #define WFATAL   1
 #define WMESSAGE 2
 
-int _chk(U32 flags, SV** mark, I32 items) {
-  return 1;
+const char *WARN_DEFAULTstring = "\x10\x01\x00\x00\x00\x50\x04\x00\x00\x00\x00\x00\x00\x55\x15\x55\x05"; /* [2,56,60,61,52,53,57,62,63,54,58,55,64,4,65,22,23,25] */
+
+const struct Perl_warnings *
+Perl_warnings_lookup (register const char *str, register unsigned int len);
+
+static int _chk(const char *sub, U32 flags, I32 ax) {
+    dSP;
+    SV **mark = PL_stack_base + ax - 1;
+    dITEMS;
+    SV *message, *mask;
+    char *category;
+    int i, is_obj = 0;
+    struct Perl_warnings *w;
+    int has_message = flags & WMESSAGE;
+
+    if (!(items == 1 || items == (has_message ? 2 : 0))) {
+        croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
+    }
+    if (has_message) {
+        message = ST(1);
+        if (DEBUG_v_TEST_)
+            Perl_deb("warnings::%s \"%s\"\n", sub, SvPVX(message));
+    }
+    if (items > 0) {
+        if (SvOBJECT(ST(0))) {
+            category = HvNAME(SvSTASH(ST(0)));
+            is_obj = 1;
+        } else if (SvPOK(ST(0))) {
+            category = SvPVX(ST(0));
+        } else {
+            croak("not an object");
+        }
+    } else {
+        category = HvNAME(CopSTASH(PL_curcop));
+    }
+    if (DEBUG_v_TEST_)
+        Perl_deb("warnings::%s category=%s\n", sub, category);
+
+    w = Perl_warnings_lookup(category, strlen(category));
+    if (!w) {
+        if (items > 0)
+            croak("Unknown warnings category '%s'", category);
+        else
+            croak("package '%s' not registered for warnings", category);
+    }
+    if (is_obj) {
+        /* TODO: walk the callstack and find category */
+        i = 0;
+    } else {
+        i = 0; /* Carp short_error_loc(); */
+    }
+    {
+        const PERL_CONTEXT *cx = caller_cx(i, NULL);
+        if (cx) {
+            STRLEN * const old_warnings = cx->blk_oldcop->cop_warnings;
+
+            if  (old_warnings == pWARN_NONE)
+                mask = newSVpvn(WARN_NONEstring, WARNsize);
+            else if (old_warnings == pWARN_STD && (PL_dowarn & G_WARN_ON) == 0)
+                mask = &PL_sv_undef;
+            else if (old_warnings == pWARN_ALL ||
+                     (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
+                /* Get the bit mask for $warnings::Bits{all}, because
+                 * it could have been extended by warnings::register */
+                SV **bits_all;
+                HV * const bits = get_hv("warnings::Bits", 0);
+                if (bits && ((bits_all = hv_fetchs(bits, "all", FALSE)))) {
+                    mask = newSVsv(*bits_all);
+                }
+                else {
+                    mask = newSVpvn(WARN_ALLstring, WARNsize);
+                }
+            }
+            else
+                mask = newSVpvn((char *) (old_warnings + 1), old_warnings[0]);
+        } else {
+            mask = newSVpvn(WARN_DEFAULTstring, WARNsize);
+        }
+    }
+    if (DEBUG_v_TEST_) {
+        SV *dsv = newSVpvs("");
+        pv_pretty( dsv, SvPVX(mask), SvCUR(mask), 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+        Perl_deb("warnings::%s depth=%d, mask=%s\n", sub, i, SvPVX(dsv));
+        SvREFCNT_dec(dsv);
+    }
+    return 1;
 }
 
 %}
@@ -143,39 +227,39 @@ SV*
 bits (mask, ...)
    SV* mask
 CODE:
-   XSRETURN_UNDEF;
+    XSRETURN_UNDEF;
 
 bool
 enabled (...)
 CODE:
-   if (_chk(WFATAL, MARK, items))
-     XSRETURN_YES;
-   else
-     XSRETURN_NO;
+    if (_chk("enabled", WNORMAL, ax))
+      XSRETURN_YES;
+    else
+      XSRETURN_NO;
 
 bool
 fatal_enabled (...)
 CODE:
-   if (_chk(WFATAL, MARK, items))
-     XSRETURN_YES;
-   else
-     XSRETURN_NO;
+    if (_chk("fatal_enabled", WFATAL, ax))
+      XSRETURN_YES;
+    else
+      XSRETURN_NO;
 
 bool
 warn (...)
 CODE:
-   if (_chk(WFATAL|WMESSAGE, MARK, items))
-     XSRETURN_YES;
-   else
-     XSRETURN_NO;
+    if (_chk("warn", WFATAL|WMESSAGE, ax))
+      XSRETURN_YES;
+    else
+      XSRETURN_NO;
 
 bool
 warnif (...)
 CODE:
-   if (_chk(WNORMAL|WFATAL|WMESSAGE, MARK, items))
-     XSRETURN_YES;
-   else
-     XSRETURN_NO;
+    if (_chk("warnif", WNORMAL|WFATAL|WMESSAGE, ax))
+      XSRETURN_YES;
+    else
+      XSRETURN_NO;
 
 SV*
 import (klass, ...)
