@@ -61,116 +61,6 @@ Generated lookup function.
 const struct Perl_warnings *
 Perl_warnings_lookup (register const char *str, register unsigned int len);
 
-static int _chk(const char *sub, U32 flags, I32 ax) {
-    dSP;
-    SV **mark = PL_stack_base + ax - 1;
-    dITEMS;
-    SV *message, *mask;
-    char *category;
-    int i, is_obj = 0;
-    struct Perl_warnings *w;
-    int has_message = flags & WMESSAGE;
-    int results_0 = 0, results_1 = 0;
-
-    if (!(items == 1 || items == (has_message ? 2 : 0))) {
-        SV *msg = newSVpvs("");
-        sv_catpvf(msg, "Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
-        croak_sv(carp_shortmess(ax, msg));
-        /*croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");*/
-    }
-    if (has_message) {
-        message = ST(1);
-        if (DEBUG_v_TEST_)
-            Perl_deb("warnings::%s \"%s\"\n", sub, SvPVX(message));
-    }
-    if (items > 0) {
-        if (SvOBJECT(ST(0))) {
-            category = HvNAME(SvSTASH(ST(0)));
-            is_obj = 1;
-        } else if (SvPOK(ST(0))) {
-            category = SvPVX(ST(0));
-        } else {
-            croak_sv(carp_shortmess(ax, newSVpvs("not an object")));
-        }
-    } else {
-        category = HvNAME(CopSTASH(PL_curcop));
-    }
-    if (DEBUG_v_TEST_)
-        Perl_deb("warnings::%s category=%s\n", sub, category);
-
-    w = Perl_warnings_lookup(category, strlen(category));
-    if (!w) {
-        SV *msg = newSVpvs("");
-        if (items > 0)
-            sv_catpvf(msg, "Unknown warnings category '%s'", category);
-        else
-            sv_catpvf(msg, "package '%s' not registered for warnings", category);
-        croak_sv(carp_shortmess(ax, msg));
-    }
-    if (is_obj) {
-        /* TODO: walk the callstack and find category */
-        i = 0;
-    } else {
-        i = short_error_loc();
-    }
-    {
-        const PERL_CONTEXT *cx = caller_cx(i, NULL);
-        if (cx) {
-            STRLEN * const old_warnings = cx->blk_oldcop->cop_warnings;
-
-            if  (old_warnings == pWARN_NONE)
-                mask = newSVpvn(WARN_NONEstring, WARNsize);
-            else if (old_warnings == pWARN_STD && (PL_dowarn & G_WARN_ON) == 0)
-                mask = &PL_sv_undef;
-            else if (old_warnings == pWARN_ALL ||
-                     (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
-                /* XXX depends on register_categories().
-                   if extended get the extended all mask. */
-                SV **bits_all;
-                HV * const bits = get_hv("warnings::Bits", 0);
-                if (bits && ((bits_all = hv_fetchs(bits, "all", FALSE)))) {
-                    mask = newSVsv(*bits_all);
-                }
-                else {
-                    mask = newSVpvn(WARN_ALLstring, WARNsize);
-                }
-            }
-            else
-                mask = newSVpvn((char *) (old_warnings + 1), old_warnings[0]);
-        } else {
-            mask = newSVpvn(WARN_DEFAULTstring, WARNsize);
-        }
-    }
-    if (DEBUG_v_TEST_) {
-        SV *dsv = newSVpvs("");
-        pv_pretty( dsv, SvPVX(mask), SvCUR(mask), 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
-        Perl_deb("warnings::%s depth=%d, mask=%s\n", sub, i, SvPVX(dsv));
-        SvREFCNT_dec(dsv);
-    }
-    if (flags & WFATAL) {
-        const char* m = SvPVX(mask);
-        results_0 = (int)m[w->offset + WFATAL - 1];
-        if (!results_0) results_0 = (int)m[WFATAL - 1];
-    }
-    if (flags & WNORMAL) {
-        const char* m = SvPVX(mask);
-        results_1 = (int)m[w->offset + WNORMAL - 1];
-        if (!results_1) results_1 = (int)m[WNORMAL - 1];
-    }
-    /* &enabled and &fatal_enabled */
-    if (!has_message)
-        return results_0 ? results_0 : results_1;
-    /* &warnif, and the category is neither enabled as warning nor as fatal */
-    if (flags == (WNORMAL | WFATAL | WMESSAGE) && !(results_0 | results_1))
-        return 0;
-    if (results_0)
-        croak_sv(carp_longmess(ax, message));
-    /* will always get here for &warn. will only get here for &warnif if the
-       category is enabled */
-    warn_sv(carp_shortmess(ax, message));
-    return 1;
-}
-
 %}
 %language=ANSI-C
 %struct-type
@@ -251,6 +141,115 @@ locale, 130, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x
 missing, 132, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20"
 redundant, 134, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80"
 %%
+
+static int _chk(const char *sub, U32 flags, I32 ax) {
+    dSP;
+    SV **mark = PL_stack_base + ax - 1;
+    dITEMS;
+    SV *message, *mask;
+    char *category;
+    const struct Perl_warnings *w;
+    const PERL_CONTEXT *cx;
+    int i, is_obj = 0;
+    int has_message = flags & WMESSAGE;
+    int results_0 = 0, results_1 = 0;
+
+    if (!(items == 1 || items == (has_message ? 2 : 0))) {
+        SV *msg = newSVpvs("");
+        sv_catpvf(msg, "Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
+        croak_sv(carp_shortmess(ax, msg));
+        /*croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");*/
+    }
+    if (has_message) {
+        message = ST(1);
+        if (DEBUG_v_TEST_)
+            Perl_deb("warnings::%s \"%s\"\n", sub, SvPVX(message));
+    }
+    if (items > 0) {
+        if (SvOBJECT(ST(0))) {
+            category = HvNAME(SvSTASH(ST(0)));
+            is_obj = 1;
+        } else if (SvPOK(ST(0))) {
+            category = SvPVX(ST(0));
+        } else {
+            croak_sv(carp_shortmess(ax, newSVpvs("not an object")));
+        }
+    } else {
+        category = HvNAME(CopSTASH(PL_curcop));
+    }
+    if (DEBUG_v_TEST_)
+        Perl_deb("warnings::%s category=%s\n", sub, category);
+
+    w = Perl_warnings_lookup(category, strlen(category));
+    if (!w) {
+        SV *msg = newSVpvs("");
+        if (items > 0)
+            sv_catpvf(msg, "Unknown warnings category '%s'", category);
+        else
+            sv_catpvf(msg, "package '%s' not registered for warnings", category);
+        croak_sv(carp_shortmess(ax, msg));
+    }
+
+    if (is_obj) {
+        /* TODO: walk the callstack and find category */
+        i = 0;
+    } else {
+        i = short_error_loc();
+    }
+    if ((cx = caller_cx(i, NULL))) {
+        STRLEN * const old_warnings = cx->blk_oldcop->cop_warnings;
+
+        if  (old_warnings == pWARN_NONE)
+            mask = newSVpvn(WARN_NONEstring, WARNsize);
+        else if (old_warnings == pWARN_STD && (PL_dowarn & G_WARN_ON) == 0)
+            mask = &PL_sv_undef;
+        else if (old_warnings == pWARN_ALL ||
+                 (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
+            /* XXX depends on register_categories().
+               if extended get the extended all mask. */
+            SV **bits_all;
+            HV * const bits = get_hv("warnings::Bits", 0);
+            if (bits && ((bits_all = hv_fetchs(bits, "all", FALSE)))) {
+                mask = newSVsv(*bits_all);
+            }
+            else {
+                mask = newSVpvn(WARN_ALLstring, WARNsize);
+            }
+        }
+        else
+            mask = newSVpvn((char *) (old_warnings + 1), old_warnings[0]);
+    } else {
+        mask = newSVpvn(WARN_DEFAULTstring, WARNsize);
+    }
+    if (DEBUG_v_TEST_) {
+        SV *dsv = newSVpvs("");
+        pv_pretty( dsv, SvPVX(mask), SvCUR(mask), 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+        Perl_deb("warnings::%s depth=%d, mask=%s\n", sub, i, SvPVX(dsv));
+        SvREFCNT_dec(dsv);
+    }
+    if (flags & WFATAL) {
+        const char* m = SvPVX(mask);
+        results_0 = (int)m[w->offset + WFATAL - 1];
+        if (!results_0) results_0 = (int)m[WFATAL - 1];
+    }
+    if (flags & WNORMAL) {
+        const char* m = SvPVX(mask);
+        results_1 = (int)m[w->offset + WNORMAL - 1];
+        if (!results_1) results_1 = (int)m[WNORMAL - 1];
+    }
+    /* &enabled and &fatal_enabled */
+    if (!has_message)
+        return results_0 ? results_0 : results_1;
+    /* &warnif, and the category is neither enabled as warning nor as fatal */
+    if (flags == (WNORMAL | WFATAL | WMESSAGE) && !(results_0 | results_1))
+        return 0;
+    if (results_0)
+        croak_sv(carp_longmess(ax, message));
+    /* will always get here for &warn. will only get here for &warnif if the
+       category is enabled */
+    warn_sv(carp_shortmess(ax, message));
+    return 1;
+}
 
 MODULE = warnings		PACKAGE = warnings
 

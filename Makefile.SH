@@ -1234,13 +1234,21 @@ warnings_boot :
 
 warnings_post : lib/warnings.pm lib/warnings/register.pm
 
-lib/auto/warnings/warnings$(DLSUFFIX) : ext/warnings/warnings_xs.PL ext/warnings/warnings_xs.in \
-  $(MINIPERL_EXE) warnings_boot lib/buildcustomize.pl preplibrary dist/ExtUtils-ParseXS/pm_to_blib FORCE
+# defer this to make regen
+ext/warnings/warnings.xs : ext/warnings/warnings_xs.PL ext/warnings/warnings_xs.in \
+			   $(MINIPERL_EXE) warnings_boot lib/buildcustomize.pl
 	$(MINIPERL) ext/warnings/warnings_xs.PL
+
+ext/warnings/warnings.c : ext/warnings/warnings.xs preplibrary dist/ExtUtils-ParseXS/pm_to_blib
 	cd ext/warnings && $(LDLIBPTH) ../../$(MINIPERL_EXE) -I../../lib ../../lib/ExtUtils/xsubpp -noprototypes \
 		-typemap ../../lib/ExtUtils/typemap warnings.xs > warnings.c
-	`$(CCCMD)` $(PLDLFLAGS) -I. ext/warnings/warnings.c
-	`$(CCCMD)` $(LDDLFLAGS) ext/warnings/warnings$(OBJ_EXT) -o $@
+ext/warnings/warnings.i : ext/warnings/warnings.c $(h)
+	@echo `$(CCCMDSRC)` -I. -E ext/warnings/warnings.c \> $@
+	@`$(CCCMDSRC)` -I. -E ext/warnings/warnings.c > $@
+ext/warnings/warnings$(OBJ_EXT) : ext/warnings/warnings.c $(h)
+	`$(CCCMD)` $(LDDLFLAGS) $(CCCDLFLAGS) -I. ext/warnings/warnings.c -o $@
+lib/auto/warnings/warnings$(DLSUFFIX) : ext/warnings/warnings$(OBJ_EXT) $(LIBPERL)
+	$(LD) -o $@ $(LDDLFLAGS) ext/warnings/warnings$(OBJ_EXT)
 	$(MAKE) warnings_post
 
 d_dummy $(dynamic_ext):	$(MINIPERL_EXE) warnings_boot lib/buildcustomize.pl preplibrary makeppport $(DYNALOADER) FORCE $(PERLEXPORT) $(LIBPERL)
