@@ -114,8 +114,11 @@
 #define WARN_REDUNDANT			 67
 
 #define WARNsize			 17
+#define WARN_LAST_BIT			 136
 #define WARN_ALLstring			 "\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125"
 #define WARN_NONEstring			 "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+/*					 [2,56,60,61,52,53,57,62,63,54,58,55,64,4,65,22,23,25] */
+#define WARN_DEFAULTstring		 "\20\1\0\0\0\120\4\0\0\0\0\0\0\125\25\125\5"
 
 #define isLEXWARN_on 	(PL_curcop->cop_warnings != pWARN_STD)
 #define isLEXWARN_off	(PL_curcop->cop_warnings == pWARN_STD)

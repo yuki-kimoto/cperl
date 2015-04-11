@@ -32,10 +32,9 @@
 #  error "gperf generated tables don't work with this non ISO-646 based character set."
 #endif
 
-#line 1 "ext/warnings/warnings_xs.in"
+/*
 
-/* ex: set ro ft=c: -*- buffer-read-only: t; mode:c -*-
-   Copyright (C) 2015, cPanel Inc
+Copyright (C) 2015, cPanel Inc
 
 =head1 NAME
 
@@ -43,26 +42,29 @@ ext/warnings/warnings.xs - gperf generated read-only warnings hash as shared lib
 
 =head1 DESCRIPTION
 
-Generated warnings hash from F<ext/warnings/warnings_xs.PL>
+Generated warnings hash from F<ext/warnings/warnings_xs.in> via F<ext/warnings/warnings_xs.PL>
 
-    gperf --output-file=ext/warnings/warnings.xs ext/warnings/warnings_xs.in
+C<gperf --output-file=ext/warnings/warnings.xs ext/warnings/warnings_xs.in>
+with cleanup for header, inline, C++ and c89.
 
-    cleanup for header, inline, C++ and c89 via F<ext/warnings/warnings_xs.PL>
+The hashes C<%Bits>, C<%DeadBits> are tied to the the values in the
+const wordlist perfect hash.  Only the C<all> key is writable, but the
+hash is extendable.  Every read-access goes first through the perfect
+hash, and then into a normal perl hash, to be able to register custom
+user-categories. We assume almost nobody needs to create his own user
+category, so penalize this.
 
 =over 4
 
 =item C<struct Perl_warnings>
 
-Generated hash table with name, offsets, bits and deadbits.
+Generated read-only hash table with name, offsets, bits and deadbits.
 
 =back
 
 =head2 Functions
 
 =over 4
-
-=item C<static unsigned int Perl_warnings_hash(register const char *str,
-register unsigned int len)>
 
 =item C<const struct Perl_warnings * Perl_warnings_lookup(register const
 char *str, register unsigned int len)>
@@ -83,11 +85,11 @@ Generated lookup function.
 
 #include "warnings.h"
 
-#define WNORMAL  0
-#define WFATAL   1
-#define WMESSAGE 2
+#define WNORMAL  1
+#define WFATAL   2
+#define WMESSAGE 4
 
-const char *WARN_DEFAULTstring = "\x10\x01\x00\x00\x00\x50\x04\x00\x00\x00\x00\x00\x00\x55\x15\x55\x05"; /* [2,56,60,61,52,53,57,62,63,54,58,55,64,4,65,22,23,25] */
+#define AV_PUSH(av, val) av_store(av, AvFILLp(av)+1, val)
 
 const struct Perl_warnings *
 Perl_warnings_lookup (register const char *str, register unsigned int len);
@@ -98,9 +100,10 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     dITEMS;
     SV *message, *mask;
     char *category;
-    int i, is_obj = 0;
     struct Perl_warnings *w;
+    int i, is_obj = 0;
     int has_message = flags & WMESSAGE;
+    int results_0 = 0, results_1 = 0;
 
     if (!(items == 1 || items == (has_message ? 2 : 0))) {
         croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
@@ -136,7 +139,8 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         /* TODO: walk the callstack and find category */
         i = 0;
     } else {
-        i = 0; /* Carp short_error_loc(); */
+        /* TODO Carp short_error_loc(); */
+        i = 0;
     }
     {
         const PERL_CONTEXT *cx = caller_cx(i, NULL);
@@ -172,10 +176,31 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         Perl_deb("warnings::%s depth=%d, mask=%s\n", sub, i, SvPVX(dsv));
         SvREFCNT_dec(dsv);
     }
+    if (flags & WFATAL) {
+        const char* m = SvPVX(mask);
+        results_0 = (int)m[w->offset + WFATAL - 1];
+        if (!results_0) results_0 = (int)m[WFATAL - 1];
+    }
+    if (flags & WNORMAL) {
+        const char* m = SvPVX(mask);
+        results_1 = (int)m[w->offset + WNORMAL - 1];
+        if (!results_1) results_1 = (int)m[WNORMAL - 1];
+    }
+    /* &enabled and &fatal_enabled */
+    if (!has_message)
+        return results_0 ? results_0 : results_1;
+    /* &warnif, and the category is neither enabled as warning nor as fatal */
+    if (flags == (WNORMAL | WFATAL | WMESSAGE) && !(results_0 | results_1))
+        return 0;
+    if (results_0)
+        croak(SvPVX_const(message));
+    /* will always get here for &warn. will only get here for &warnif if the
+       category is enabled */
+    Perl_warn(aTHX_ SvPVX_const(carp_shortmess(ax, message)));
     return 1;
 }
 
-#line 152 "ext/warnings/warnings_xs.in"
+#line 179 "ext/warnings/warnings_xs.in"
 struct Perl_warnings { int name; const unsigned char offset; const char* bits; const char* deadbits; };
 
 #define TOTAL_KEYWORDS 68
@@ -184,7 +209,6 @@ struct Perl_warnings { int name; const unsigned char offset; const char* bits; c
 #define MIN_HASH_VALUE 4
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
-
 
 static unsigned int
 Perl_warnings_hash (register const char *str, register unsigned int len)
@@ -395,169 +419,169 @@ Perl_warnings_lookup (register const char *str, register unsigned int len)
   static const struct Perl_warnings wordlist[] =
     {
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 164 "ext/warnings/warnings_xs.in"
+#line 191 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str4, 20, "\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 177 "ext/warnings/warnings_xs.in"
+#line 204 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str7, 46, "\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 173 "ext/warnings/warnings_xs.in"
+#line 200 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str8, 38, "\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 197 "ext/warnings/warnings_xs.in"
+#line 224 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str10, 86, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 171 "ext/warnings/warnings_xs.in"
+#line 198 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str13, 34, "\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 204 "ext/warnings/warnings_xs.in"
+#line 231 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str14, 100, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 194 "ext/warnings/warnings_xs.in"
+#line 221 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str17, 80, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 186 "ext/warnings/warnings_xs.in"
+#line 213 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str21, 64, "\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 159 "ext/warnings/warnings_xs.in"
+#line 186 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str22, 10, "\x00\x54\x55\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00", "\x00\xa8\xaa\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 168 "ext/warnings/warnings_xs.in"
+#line 195 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str24, 28, "\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 162 "ext/warnings/warnings_xs.in"
+#line 189 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str25, 16, "\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 219 "ext/warnings/warnings_xs.in"
+#line 246 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str26, 130, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08"},
-#line 155 "ext/warnings/warnings_xs.in"
+#line 182 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str27, 2, "\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 189 "ext/warnings/warnings_xs.in"
+#line 216 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str29, 70, "\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 156 "ext/warnings/warnings_xs.in"
+#line 183 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str30, 4, "\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 202 "ext/warnings/warnings_xs.in"
+#line 229 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str31, 96, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00"},
-#line 163 "ext/warnings/warnings_xs.in"
+#line 190 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str32, 18, "\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 184 "ext/warnings/warnings_xs.in"
+#line 211 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str33, 60, "\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 212 "ext/warnings/warnings_xs.in"
+#line 239 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str34, 116, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 200 "ext/warnings/warnings_xs.in"
+#line 227 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str36, 92, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 221 "ext/warnings/warnings_xs.in"
+#line 248 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str39, 134, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 213 "ext/warnings/warnings_xs.in"
+#line 240 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str43, 118, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00"},
-#line 183 "ext/warnings/warnings_xs.in"
+#line 210 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str44, 58, "\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 160 "ext/warnings/warnings_xs.in"
+#line 187 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str46, 12, "\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 203 "ext/warnings/warnings_xs.in"
+#line 230 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str47, 98, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00"},
-#line 165 "ext/warnings/warnings_xs.in"
+#line 192 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str48, 22, "\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 208 "ext/warnings/warnings_xs.in"
+#line 235 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str49, 108, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 182 "ext/warnings/warnings_xs.in"
+#line 209 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str51, 56, "\x00\x00\x00\x00\x00\x00\x00\x55\x55\x15\x00\x40\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\xaa\xaa\x2a\x00\x80\x00\x00\x00\x00\x00"},
-#line 205 "ext/warnings/warnings_xs.in"
+#line 232 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str52, 102, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x55\x15\x55\x01", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\xaa\x2a\xaa\x02"},
-#line 178 "ext/warnings/warnings_xs.in"
+#line 205 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str53, 48, "\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 172 "ext/warnings/warnings_xs.in"
+#line 199 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str54, 36, "\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 187 "ext/warnings/warnings_xs.in"
+#line 214 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str55, 66, "\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 181 "ext/warnings/warnings_xs.in"
+#line 208 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str56, 54, "\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 190 "ext/warnings/warnings_xs.in"
+#line 217 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str57, 72, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00"},
-#line 191 "ext/warnings/warnings_xs.in"
+#line 218 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str58, 74, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00"},
-#line 192 "ext/warnings/warnings_xs.in"
+#line 219 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str59, 76, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 175 "ext/warnings/warnings_xs.in"
+#line 202 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str61, 42, "\x00\x00\x00\x00\x00\x54\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\xa8\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 167 "ext/warnings/warnings_xs.in"
+#line 194 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str62, 26, "\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 166 "ext/warnings/warnings_xs.in"
+#line 193 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str64, 24, "\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 196 "ext/warnings/warnings_xs.in"
+#line 223 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str66, 84, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 210 "ext/warnings/warnings_xs.in"
+#line 237 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str68, 112, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00"},
-#line 199 "ext/warnings/warnings_xs.in"
+#line 226 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str69, 90, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 206 "ext/warnings/warnings_xs.in"
+#line 233 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str71, 104, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00"},
-#line 201 "ext/warnings/warnings_xs.in"
+#line 228 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str72, 94, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00"},
-#line 216 "ext/warnings/warnings_xs.in"
+#line 243 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str73, 124, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00"},
-#line 215 "ext/warnings/warnings_xs.in"
+#line 242 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str74, 122, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00"},
       {-1, 0, NULL, NULL},
-#line 179 "ext/warnings/warnings_xs.in"
+#line 206 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str76, 50, "\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 195 "ext/warnings/warnings_xs.in"
+#line 222 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str78, 82, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00"},
-#line 161 "ext/warnings/warnings_xs.in"
+#line 188 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str79, 14, "\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 193 "ext/warnings/warnings_xs.in"
+#line 220 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str80, 78, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 154 "ext/warnings/warnings_xs.in"
+#line 181 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str83, 0, "\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55", "\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa"},
-#line 170 "ext/warnings/warnings_xs.in"
+#line 197 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str84, 32, "\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 174 "ext/warnings/warnings_xs.in"
+#line 201 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str86, 40, "\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 211 "ext/warnings/warnings_xs.in"
+#line 238 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str88, 114, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00"},
-#line 209 "ext/warnings/warnings_xs.in"
+#line 236 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str89, 110, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 220 "ext/warnings/warnings_xs.in"
+#line 247 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str92, 132, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20"},
       {-1, 0, NULL, NULL},
-#line 176 "ext/warnings/warnings_xs.in"
+#line 203 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str94, 44, "\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 185 "ext/warnings/warnings_xs.in"
+#line 212 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str95, 62, "\x00\x00\x00\x00\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 188 "ext/warnings/warnings_xs.in"
+#line 215 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str96, 68, "\x00\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 207 "ext/warnings/warnings_xs.in"
+#line 234 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str97, 106, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00"},
       {-1, 0, NULL, NULL},
-#line 198 "ext/warnings/warnings_xs.in"
+#line 225 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str99, 88, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x15\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x2a\x00\x00\x00\x00"},
-#line 217 "ext/warnings/warnings_xs.in"
+#line 244 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str100, 126, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x40\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x00"},
-#line 218 "ext/warnings/warnings_xs.in"
+#line 245 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str101, 128, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 180 "ext/warnings/warnings_xs.in"
+#line 207 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str106, 52, "\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x00\x00\x00\x20\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 157 "ext/warnings/warnings_xs.in"
+#line 184 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str107, 6, "\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
-#line 169 "ext/warnings/warnings_xs.in"
+#line 196 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str108, 30, "\x00\x00\x00\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 214 "ext/warnings/warnings_xs.in"
+#line 241 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str111, 120, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00"},
       {-1, 0, NULL, NULL}, {-1, 0, NULL, NULL},
-#line 158 "ext/warnings/warnings_xs.in"
+#line 185 "ext/warnings/warnings_xs.in"
       {(int)(long)&((struct stringpool_t *)0)->stringpool_str114, 8, "\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", "\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"}
     };
 
@@ -579,7 +603,7 @@ Perl_warnings_lookup (register const char *str, register unsigned int len)
     }
   return 0;
 }
-#line 222 "ext/warnings/warnings_xs.in"
+#line 249 "ext/warnings/warnings_xs.in"
 
 
 MODULE = warnings		PACKAGE = warnings
@@ -637,5 +661,23 @@ CODE:
 void
 register_categories (...)
 CODE:
-    AV* names;
+    int i;
+    /* check if name is registered (const key).
+       if not, add key and also add bit to Bits{all} and DeadBits{all} */
+    for (i=0; i<items; i++) {
+        SV *name = ST(i);
+        char* n;
+        struct Perl_warnings *w;
+        if (!SvPOK(name)) continue;
+        n = SvPVX(name);
+        w = Perl_warnings_lookup(n, SvCUR(name));
+        if (!w) { /* oops, a new category. should be a very rare case */
+            HV * const bits = get_hv("warnings::Bits", GV_ADD);
+            if (DEBUG_v_TEST_)
+                Perl_deb("warnings::register_categories %s\n", n);
+            if (bits) {
+                hv_stores(bits, "all", newSVpvn(WARN_ALLstring, WARNsize));
+            }
+        }
+    }
     XSRETURN_UNDEF;
