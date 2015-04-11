@@ -73,7 +73,10 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     int results_0 = 0, results_1 = 0;
 
     if (!(items == 1 || items == (has_message ? 2 : 0))) {
-        croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
+        SV *msg = newSVpvs("");
+        sv_catpvf(msg, "Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
+        croak_sv(carp_shortmess(ax, msg));
+        /*croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");*/
     }
     if (has_message) {
         message = ST(1);
@@ -87,7 +90,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         } else if (SvPOK(ST(0))) {
             category = SvPVX(ST(0));
         } else {
-            croak("not an object");
+            croak_sv(carp_shortmess(ax, newSVpvs("not an object")));
         }
     } else {
         category = HvNAME(CopSTASH(PL_curcop));
@@ -97,17 +100,18 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
 
     w = Perl_warnings_lookup(category, strlen(category));
     if (!w) {
+        SV *msg = newSVpvs("");
         if (items > 0)
-            croak("Unknown warnings category '%s'", category);
+            sv_catpvf(msg, "Unknown warnings category '%s'", category);
         else
-            croak("package '%s' not registered for warnings", category);
+            sv_catpvf(msg, "package '%s' not registered for warnings", category);
+        croak_sv(carp_shortmess(ax, msg));
     }
     if (is_obj) {
         /* TODO: walk the callstack and find category */
         i = 0;
     } else {
-        /* TODO Carp short_error_loc(); */
-        i = 0;
+        i = short_error_loc();
     }
     {
         const PERL_CONTEXT *cx = caller_cx(i, NULL);
@@ -120,8 +124,8 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
                 mask = &PL_sv_undef;
             else if (old_warnings == pWARN_ALL ||
                      (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
-                /* Get the bit mask for $warnings::Bits{all}, because
-                 * it could have been extended by warnings::register */
+                /* XXX depends on register_categories().
+                   if extended get the extended all mask. */
                 SV **bits_all;
                 HV * const bits = get_hv("warnings::Bits", 0);
                 if (bits && ((bits_all = hv_fetchs(bits, "all", FALSE)))) {
@@ -160,10 +164,10 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     if (flags == (WNORMAL | WFATAL | WMESSAGE) && !(results_0 | results_1))
         return 0;
     if (results_0)
-        croak(SvPVX_const(message));
+        croak_sv(carp_longmess(ax, message));
     /* will always get here for &warn. will only get here for &warnif if the
        category is enabled */
-    Perl_warn(aTHX_ SvPVX_const(carp_shortmess(ax, message)));
+    warn_sv(carp_shortmess(ax, message));
     return 1;
 }
 
