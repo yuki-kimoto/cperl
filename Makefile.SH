@@ -270,6 +270,7 @@ man3ext = $man3ext
 # The following are used to build and install shared libraries for
 # dynamic loading.
 LDDLFLAGS = $lddlflags
+CCCDLFLAGS = $cccdlflags
 SHRPLDFLAGS = $shrpldflags
 CCDLFLAGS = $ccdlflags
 DLSUFFIX = .$dlext
