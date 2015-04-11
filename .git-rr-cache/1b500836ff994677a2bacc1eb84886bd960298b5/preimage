@@ -2,19 +2,20 @@
 #
 # Regenerate (overwriting only if changed):
 #
-#    ext/warnings/warnings.in
 #    warnings.h
+#    ext/warnings/warnings_xs.in
+#    ext/warnings/warnings.xs
 #
 # from information hardcoded into this script (the $tree hash), plus the
-# template for warnings.in in the DATA section.
+# gperf template for warnings_xs.in
 #
 # When changing the number of warnings, t/op/caller.t should change to
-# correspond with the value of $BYTES in lib/warnings.pm
+# correspond with the value of NUM_WARNINGS in warnings.h
 #
 # With an argument of 'tree', just dump the contents of $tree and exits.
 # Also accepts the standard regen_lib -q and -v args.
 #
-# This script is normally invoked from regen.pl.
+# This script is normally invoked from make regen, regen.pl.
 
 $VERSION = '2.00';
 
@@ -313,10 +314,11 @@ if (@ARGV && $ARGV[0] eq "tree")
     exit ;
 }
 
-my ($warn, $in) = map {
-    open_new($_, '>', { by => 'ext/warnings_c.PL' });
-} 'warnings.h', 'ext/warnings/warnings.in';
-
+my $force = @ARGV ? $ARGV[0] eq '--force' : 0;
+my $warn = open_new('warnings.h', '>', { by => 'ext/warnings/warnings_xs.PL' });
+my $xsin = 'ext/warnings/warnings_xs.in';
+my $xsout = 'ext/warnings/warnings.xs';
+my $xs = open_new($xsin, '>');
 my ($index, $warn_size);
 
 {
@@ -351,6 +353,7 @@ EOM
 
   valueWalk ($tree) ;
   $index = orderValues();
+  my $num_warnings = $index;
 
   die <<EOM if $index > 255 ;
 Too many warnings categories -- max is 255
@@ -380,9 +383,13 @@ EOM
   }
   print $warn "\n\n";
 
-  print $warn tab(6, '#define WARNsize'),	" $warn_size\n" ;
-  print $warn tab(6, '#define WARN_ALLstring'), ' "', ('\125' x $warn_size) , "\"\n" ;
-  print $warn tab(6, '#define WARN_NONEstring'), ' "', ('\0' x $warn_size) , "\"\n" ;
+  print $warn tab(6, "#define NUM_WARNINGS"),   " $num_warnings\n";
+  print $warn tab(6, '#define WARNsize'),	" $warn_size\n";
+  print $warn tab(6, '#define WARN_LAST_BIT'),	" $index\n";
+  print $warn tab(6, '#define WARN_ALLstring'), ' "', ('\125' x $warn_size) , "\"\n";
+  print $warn tab(6, '#define WARN_NONEstring'), ' "', ('\0' x $warn_size) , "\"\n";
+  print $warn tab(6, '/*'), ' [', mkRange(@def), "] */\n";
+  print $warn tab(6, '#define WARN_DEFAULTstring'), ' "',  mkOct($warn_size, map $_ * 2, @def) , "\"\n" ;
 
   print $warn <<'EOM';
 
@@ -441,113 +448,41 @@ EOM
   read_only_bottom_close_and_rename($warn);
 }
 
-while (<DATA>) {
-    last if /^KEYWORDS$/ ;
-    print $in $_ ;
+my $in;
+open $in, "<", $xsin or die "Error reading '$xsin': $!";
+
+# expand only keys within %%
+while (<$in>) {
+    print $xs $_;
+    last if /^%%$/;
 }
 
-my $last_ver = 0;
-#print $in "our %Offsets = (" ;
 foreach my $k (sort { $a <=> $b } keys %ValueToName) {
     my ($name, $version) = @{ $ValueToName{$k} };
     # with registered names we need the proper case. $name = lc $name;
     my $offset = $k * 2 ;
-    if ( $last_ver != $version ) {
-        print $in "\n";
-        print $in "/* added in Perl $version */";
-        print $in "\n";
-    }
-    my $v = $list{$k};
+    my $v = $list{$name};
     my @list = sort { $a <=> $b } @$v;
     my $bits     = mkHex($warn_size, map $_ * 2 , @list);
     my $deadbits = mkHex($warn_size, map $_ * 2 + 1 , @list);
-    print "$name, $offset, \"$bits\", \"$deadbits\"\n";
-    $last_ver = $version;
+    print $xs "$name, $offset, \"$bits\", \"$deadbits\"\n";
 }
+print $xs "%%\n";
 
-read_only_bottom_close_and_rename($in);
+while (<$in>) {
+    last if /^%%$/;
+}
+# and the rest after the keys
+while (<$in>) {
+    print $xs $_;
+}
+close $in;
+$xs->flush if $xs->can('flush');
 
-<<<<<<<
-__END__
-%{
-/*
-  Copyright (C) 2015, cPanel Inc
-
-=head1 NAME
-
-ext/warnings/warnings.in - gperf input for warnings.c
-
-=head1 DESCRIPTION
-
-Generated warnings hash
-
-- gperf --output-file=ext/warnings/warnings.c ext/warnings/warnings.in
-
-- manual cleanup for inline and c89 via F<ext/warnings/warnings_c.PL>
-
-=over 4
-
-=item C<struct Perl_warnings>
-
-Generated hash table with name, offsets, bits and deadbits.
-
-=back
-
-=head2 Functions
-
-=over 4
-
-=item C<static unsigned int Perl_warnings_hash(register const char *str,
-register unsigned int len)>
-
-=item C<const struct Perl_warnings * Perl_warnings_lookup(register const
-char *str, register unsigned int len)>
-
-Generated lookup function.
-
-=back
-
-=cut
-
-*/
-
-#define PERL_NO_GET_CONTEXT
-#define PERL_EXT
-#include "EXTERN.h"
-#include "perl.h"
-#include "XSUB.h"
-
-#define BYTES 67
-
-const struct Perl_warnings *
-Perl_warnings_lookup(register const char *str, register unsigned int len);
-%}
-%language=ANSI-C
-%struct-type
-%define hash-function-name   Perl_warnings_hash
-%define lookup-function-name Perl_warnings_lookup
-%readonly-tables
-%null-strings
-%pic
-
-struct Perl_warnings {
-       int name,
-       const unsigned byte offset,
-       const char[BYTES] bits,
-       const char[BYTES] deadbits,
-};
-%%
-KEYWORDS
-%%
-
-/*
- * vim: expandtab shiftwidth=4 cinoptions='\:2=2' :
- */
-=======
-if (close_and_rename($xs)) {
-    print STDERR "gperf ext/warnings/warnings.xs\n";
-    system("gperf --output-file=ext/warnings/warnings.xs ext/warnings/warnings_xs.in");
-    post_process_gperf("ext/warnings/warnings.xs");
+if (close_and_rename($xs) or $force or -M $xsin < -M $xsout) {
+    print STDERR "gperf $xsout\n";
+    system("gperf --output-file=$xsout $xsin");
+    post_process_gperf($xsout);
 }
 
 sub post_process_gperf {
@@ -558,14 +493,15 @@ sub post_process_gperf {
   print $OUT <<'EOT';
 /* ex: set ro ft=c: -*- buffer-read-only: t; mode: c; c-basic-offset: 4; -*-
   !!!!!!!   DO NOT EDIT THIS FILE   !!!!!!!
-  This file is built by ext/warnings/warnings_xs.PL. */
+  This file is built by ext/warnings/warnings_xs.PL and ext/warnings/warnings_xs.in. */
 EOT
   open my $IN, '<', $in or die "Can't read '$in': $!";
 
   while (<$IN>) {
     # overlong line, and don't bother bug-gnu-gperf\@gnu.org with crazy encodings
     # also c_indent.t
-    s/^#?error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gnu-gperf\@gnu.org>."/#  error "gperf generated tables don't work with this execution character set."/m;
+    # XXX add EBCDIC support, bypassing gperf (i.e. pperf)
+    s/^#?error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gnu-gperf\@gnu.org>."/#  error "gperf generated tables don't work with this non ISO-646 based character set."/m;
 
     # skip line directives. would be nice but they are wrong with gperf version 3.0.4
     s/^#line .*?\n//gm;
@@ -573,7 +509,7 @@ EOT
     # C++ requires full struct initializers
     s/{-1},/{-1, 0, NULL, NULL},/g;
 
-    # skip inline. Note that on windows this regex fails.
+    # XXX skip inline. Note that on windows this regex fails.
     s/\Q#ifdef __GNUC__
 __inline
 #if defined __GNUC_STDC_INLINE__ || defined __GNUC_GNU_INLINE__
@@ -603,4 +539,3 @@ __inline
   close $OUT;
   rename $tmp, $in;
 }
->>>>>>>

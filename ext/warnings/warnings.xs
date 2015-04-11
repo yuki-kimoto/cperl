@@ -522,8 +522,8 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
             mask = &PL_sv_undef;
         else if (old_warnings == pWARN_ALL ||
                  (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
-            /* XXX depends on register_categories().
-               if extended get the extended all mask. */
+            /* XXX depends on register_categories(). See below.
+               if extended, get the extended all mask. */
             SV **bits_all;
             HV * const bits = get_hv("warnings::Bits", 0);
             if (bits && ((bits_all = hv_fetchs(bits, "all", FALSE)))) {
@@ -571,53 +571,94 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
 MODULE = warnings		PACKAGE = warnings
 
 SV*
-bits (mask, ...)
-   SV* mask
+_bits (mask, ...)
+     SV *mask
 CODE:
+    int i;
+    int fatal = 0, no_fatal = 0;
+    const struct Perl_warnings *w;
+    if (!SvPOK(mask))
+        mask = newSVpvn("", WARNsize);
+    for (i=0; i<items; i++) {
+        SV *word = ST(i);
+        if (SvPOK(word)) {
+            if (memEQs(SvPVX(word), SvCUR(word), "FATAL")) {
+                fatal = 1;
+                no_fatal = 0;
+            } else
+            if (memEQs(SvPVX(word), SvCUR(word), "NONFATAL")) {
+                fatal = 0;
+                no_fatal = 1;
+            } else
+            if ((w = Perl_warnings_lookup(SvPVX(word), SvCUR(word)))) {
+                const char *catmask = w->bits;
+#if 0
+                SvPVX(mask) |= catmask;
+                if (fatal)
+                    SvPVX(mask) |= w->deadbits;
+                if (no_fatal)
+                    SvPVX(mask) &= ~(w->deadbits | WARN_ALLstring);
+#endif
+            }
+        }
+    }
     XSRETURN_UNDEF;
+
+SV*
+bits (...)
+CODE:
+    PUSHs(&PL_sv_undef);
+    if (!items)
+        PUSHs(newSVpvs("all"));
+    if (call_pv("warnings::_bits", G_SCALAR))
+        XSRETURN(1);
+    else
+        XSRETURN_UNDEF;
 
 bool
 enabled (...)
 CODE:
     if (_chk("enabled", WNORMAL, ax))
-      XSRETURN_YES;
+        XSRETURN_YES;
     else
-      XSRETURN_NO;
+        XSRETURN_NO;
 
 bool
 fatal_enabled (...)
 CODE:
     if (_chk("fatal_enabled", WFATAL, ax))
-      XSRETURN_YES;
+        XSRETURN_YES;
     else
-      XSRETURN_NO;
+        XSRETURN_NO;
 
 bool
 warn (...)
 CODE:
     if (_chk("warn", WFATAL|WMESSAGE, ax))
-      XSRETURN_YES;
+        XSRETURN_YES;
     else
-      XSRETURN_NO;
+        XSRETURN_NO;
 
 bool
 warnif (...)
 CODE:
     if (_chk("warnif", WNORMAL|WFATAL|WMESSAGE, ax))
-      XSRETURN_YES;
+        XSRETURN_YES;
     else
-      XSRETURN_NO;
+        XSRETURN_NO;
 
 SV*
 import (klass, ...)
    SV* klass
 CODE:
+    /* TODO nyi */
     XSRETURN_UNDEF;
 
 SV*
 unimport (klass, ...)
    SV* klass
 CODE:
+    /* TODO nyi */
     XSRETURN_UNDEF;
 
 void
@@ -633,7 +674,8 @@ CODE:
         if (!SvPOK(name)) continue;
         n = SvPVX(name);
         w = Perl_warnings_lookup(n, SvCUR(name));
-        if (!w) { /* oops, a new category. should be a very rare case */
+        if (!w) { /* oops, a new category. Should be a very rare case */
+            /* TODO nyi */
             HV * const bits = get_hv("warnings::Bits", GV_ADD);
             if (DEBUG_v_TEST_)
                 Perl_deb("warnings::register_categories %s\n", n);
