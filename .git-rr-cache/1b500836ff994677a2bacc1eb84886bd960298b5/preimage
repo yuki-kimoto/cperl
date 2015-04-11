@@ -32,6 +32,8 @@ use strict ;
 
 sub DEFAULT_ON  () { 1 }
 sub DEFAULT_OFF () { 2 }
+sub EXTRA       () { 4 }
+sub NO_VER      () { 99 }
 
 my $tree = {
 'all' => [ 5.008, {
@@ -122,6 +124,17 @@ my $tree = {
         'locale'        => [ 5.021, DEFAULT_ON],
 
          #'default'     => [ 5.008, DEFAULT_ON ],
+}],
+# we also reserve some room for provided custom warning categories from our core modules.
+# Note that most usages of warnings::register on CPAN is wrong.
+'registered' => [ NO_VER, {
+        'vars'          => [ NO_VER, EXTRA],
+        'overload'      => [ NO_VER, EXTRA],
+        'Class::Struct' => [ NO_VER, EXTRA],
+        'File::stat'    => [ NO_VER, EXTRA],
+        'Tie::Handle'   => [ NO_VER, EXTRA],
+        'Tie::Hash'     => [ NO_VER, EXTRA],
+        'Tie::Scalar'   => [ NO_VER, EXTRA],
 }]};
 
 my @def ;
@@ -158,7 +171,7 @@ sub orderValues
     my $index = 0;
     foreach my $ver ( sort { $a <=> $b } keys %v_list ) {
         foreach my $name (@{ $v_list{$ver} } ) {
-	    $ValueToName{ $index } = [ uc $name, $ver ] ;
+	    $ValueToName{ $index } = [ $name, $ver ] ;
 	    $NameToValue{ uc $name } = $index ++ ;
         }
     }
@@ -189,7 +202,7 @@ sub walk
 	elsif ($rest == DEFAULT_ON)
 	  { push @def, $NameToValue{uc $k} }
 
-	push @list, @{ $list{$k} } ;
+	push @list, @{ $list{$k} } unless !ref($rest) and $rest == EXTRA;
     }
 
    return @list ;
@@ -234,7 +247,7 @@ sub warningsTree
 
         my $offset ;
 	if ($tre ne $tree) {
-	    $rv .= $prefix . "|\n" ;
+	    # $rv .= $prefix . "|\n" ;
 	    $rv .= $prefix . "+- $k" ;
 	    $offset = ' ' x ($max + 4) ;
 	}
@@ -353,13 +366,19 @@ EOM
   my $last_ver = 0;
   foreach $k (sort { $a <=> $b } keys %ValueToName) {
       my ($name, $version) = @{ $ValueToName{$k} };
-      print $warn "\n/* Warnings Categories added in Perl $version */\n\n"
-          if $last_ver != $version ;
+      if ($last_ver != $version) {
+          if ($version != NO_VER) {
+              print $warn "\n/* Warnings Categories added in Perl $version */\n\n";
+          } else {
+              print $warn "\n/* Warnings Categories reserved for warnings::register */\n\n";
+          }
+      }
+      $name = uc $name;
       $name =~ y/:/_/;
-      print $warn tab(6, "#define WARN_$name"), " $k\n" ;
-      $last_ver = $version ;
+      print $warn tab(6, "#define WARN_$name"), " $k\n";
+      $last_ver = $version;
   }
-  print $warn "\n" ;
+  print $warn "\n\n";
 
   print $warn tab(6, '#define WARNsize'),	" $warn_size\n" ;
   print $warn tab(6, '#define WARN_ALLstring'), ' "', ('\125' x $warn_size) , "\"\n" ;
@@ -431,7 +450,7 @@ my $last_ver = 0;
 #print $in "our %Offsets = (" ;
 foreach my $k (sort { $a <=> $b } keys %ValueToName) {
     my ($name, $version) = @{ $ValueToName{$k} };
-    $name = lc $name;
+    # with registered names we need the proper case. $name = lc $name;
     my $offset = $k * 2 ;
     if ( $last_ver != $version ) {
         print $in "\n";
