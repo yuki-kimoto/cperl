@@ -465,8 +465,8 @@ enabled them with the C<warnings> pragma like below.
     abc::open("../fred.txt");
 
 It is also possible to test whether the pre-defined warnings categories are
-set in the calling module with the C<warnings::enabled> function.  Consider
-this snippet of code:
+set in the calling module with the C<warnings::enabled> or C<warnings::warnif>
+functions.  Consider this snippet of code:
 
     package MyMod::Abc;
 
@@ -573,7 +573,7 @@ Notice also that the warning is reported at the line where the object is first
 used.
 
 When registering new categories of warning, you can supply more names to
-warnings::register like this:
+C<warnings::register> like this:
 
     package MyModule;
     use warnings::register qw(format precision);
@@ -636,7 +636,7 @@ Otherwise returns FALSE.
 
 =item warnings::warn($message)
 
-Print C<$message> to STDERR.
+Print the C<$message> warning to STDERR.
 
 Use the warnings category with the same name as the current package.
 
@@ -645,14 +645,14 @@ then die. Otherwise return.
 
 =item warnings::warn($category, $message)
 
-Print C<$message> to STDERR.
+Print the C<$message> warning to STDERR.
 
 If the warnings category, C<$category>, has been set to "FATAL" in the
 calling module then die. Otherwise return.
 
 =item warnings::warn($object, $message)
 
-Print C<$message> to STDERR.
+Print the C<$message> warning to STDERR.
 
 Use the name of the class for the object reference, C<$object>, as the
 warnings category.
@@ -685,7 +685,7 @@ Equivalent to:
 =item warnings::register_categories(@names)
 
 This registers warning categories for the given names and is primarily for
-use by the warnings::register pragma.
+use by the C<warnings::register> pragma.
 
 =back
 

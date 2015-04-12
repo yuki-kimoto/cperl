@@ -319,7 +319,7 @@ my $warn = open_new('warnings.h', '>', { by => 'ext/warnings/warnings_xs.PL' });
 my $xsin = 'ext/warnings/warnings_xs.in';
 my $xsout = 'ext/warnings/warnings.xs';
 my $xs = open_new($xsin, '>');
-my ($index, $warn_size);
+my ($index, $warn_size, $max_bytes);
 
 {
   # generate warnings.h
@@ -355,6 +355,7 @@ EOM
   $index = orderValues();
   my $num_warnings = $index;
 
+  $max_bytes = 32;
   die <<EOM if $index > 255 ;
 Too many warnings categories -- max is 255
     rewrite packWARN* & unpackWARN* macros
@@ -384,12 +385,13 @@ EOM
   print $warn "\n\n";
 
   print $warn tab(6, "#define NUM_WARNINGS"),   " $num_warnings\n";
-  print $warn tab(6, '#define WARNsize'),	" $warn_size\n";
   print $warn tab(6, '#define WARN_LAST_BIT'),	" $index\n";
-  print $warn tab(6, '#define WARN_ALLstring'), ' "', ('\125' x $warn_size) , "\"\n";
-  print $warn tab(6, '#define WARN_NONEstring'), ' "', ('\0' x $warn_size) , "\"\n";
+  print $warn tab(6, '#define WARNsize'),	" $warn_size\n";
+  print $warn tab(6, '#define WARN_MAX_BYTES'),	" $max_bytes\n";
+  print $warn tab(6, '#define WARN_ALLstring'), ' "', ('\125' x $max_bytes) , "\"\n";
+  print $warn tab(6, '#define WARN_NONEstring'), ' "', ('\0' x $max_bytes) , "\"\n";
   print $warn tab(6, '/*'), ' [', mkRange(@def), "] */\n";
-  print $warn tab(6, '#define WARN_DEFAULTstring'), ' "',  mkOct($warn_size, map $_ * 2, @def) , "\"\n" ;
+  print $warn tab(6, '#define WARN_DEFAULTstring'), ' "',  mkOct($max_bytes, map $_ * 2, @def) , "\"\n" ;
 
   print $warn <<'EOM';
 
@@ -460,11 +462,14 @@ while (<$in>) {
 foreach my $k (sort { $a <=> $b } keys %ValueToName) {
     my ($name, $version) = @{ $ValueToName{$k} };
     # with registered names we need the proper case. $name = lc $name;
-    my $offset = $k * 2 ;
+    my $offset = $k * 2;
     my $v = $list{$name};
     my @list = sort { $a <=> $b } @$v;
-    my $bits     = mkHex($warn_size, map $_ * 2 , @list);
-    my $deadbits = mkHex($warn_size, map $_ * 2 + 1 , @list);
+    if ($name eq 'all') {
+        @list = 0 .. 255;
+    }
+    my $bits     = mkOct($max_bytes, map $_ * 2 , @list);
+    my $deadbits = mkOct($max_bytes, map $_ * 2 + 1 , @list);
     print $xs "$name, $offset, \"$bits\", \"$deadbits\"\n";
 }
 print $xs "%%\n";
