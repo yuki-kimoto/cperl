@@ -515,7 +515,7 @@ warnings_const_lookup (register const char *str, register unsigned int len)
 struct Perl_warnings *
 Perl_warnings_lookup (register const char *str, register unsigned int len) {
     const struct Perl_warnings *w = warnings_const_lookup(str, len);
-    if (!w) {
+    if (!w || memEQs(str, 3, "all")) {
         SV **bit;
         HV * const bits = get_hv("warnings::_Bits", 0);
         if (bits && ((bit = hv_fetch(bits, str, len, FALSE)))) {
@@ -600,11 +600,11 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
              if extended, get the extended all mask. */
           HV * const bits = get_hv("warnings::_Bits", 0);
           if (bits) {
-            w = Perl_warnings_lookup("all", 3);
-            mask = newWSV(w->bits);
+              w = Perl_warnings_lookup("all", 3);
+              mask = newWSV(w->bits);
           }
           else {
-            mask = newWSV(WARN_ALLstring);
+              mask = newWSV(WARN_ALLstring);
           }
         }
         else {
@@ -724,11 +724,12 @@ PPCODE:
             do_vop(OP_BIT_OR, mask, mask, newWSV(w_all->deadbits));
     }
     if (items) {
+        SV *word = ST(1);
         PUSHs(mask);
         /* push @_, 'all' if @_==1 && ( $_[0] eq 'FATAL' || $_[0] eq 'NONFATAL' ); */
-        if (items == 1 && (SvPOK(ST(0))
-                           && (memEQs(SvPVX(ST(0)), SvCUR(ST(0)), "FATAL")
-                               || memEQs(SvPVX(ST(0)), SvCUR(ST(0)), "NONFATAL"))))
+        if (items == 1 && (SvPOK(word)
+                           && (memEQs(SvPVX(word), SvCUR(word), "FATAL")
+                               || memEQs(SvPVX(word), SvCUR(word), "NONFATAL"))))
             PUSHs(newSVpvs("all"));
         /* ${^WARNING_BITS} = @_ ? _bits($mask, @_) : $mask | $Bits{all} ; */
         if (call_pv("warnings::_bits", G_SCALAR)) {
@@ -780,7 +781,7 @@ PPCODE:
         PUSHs(newSVpvs("all"));
         items++;
     }
-    for (i=0; i<items; i++) {
+    for (i=1; i<items; i++) {
         SV *word = ST(i);
         if (!SvPOK(word)) continue;
         if (memEQs(SvPVX(word), SvCUR(word), "FATAL")) continue;
@@ -883,8 +884,7 @@ PPCODE:
                 wd->bits[ Off(last_bit) ] |= Bit(last_bit);
                 wd->deadbits[ Off(offset) ] |= Bit(offset);
                 if (Off(last_bit) > SvIVX(bytes))
-                  SvIV_set(bytes, Off(last_bit));
-
+                    SvIV_set(bytes, Off(last_bit));
                 SvIV_set(last_bitsv, offset + 1);
                 if (DEBUG_v_TEST_)
                     Perl_deb("warnings::register_categories %s\n", n);
@@ -895,8 +895,14 @@ PPCODE:
 
 BOOT:
 {
-    GV *last_bit = gv_fetchpv("warnings::LAST_BIT", GV_ADD, SVt_IV);
-    GV *bytes    = gv_fetchpv("warnings::BYTES", GV_ADD, SVt_IV);
+    GV *last_bit = gv_fetchpv("warnings::LAST_BIT", GV_ADDMULTI, SVt_IV);
+    GV *bytes    = gv_fetchpv("warnings::BYTES", GV_ADDMULTI, SVt_IV);
+    HV * const bits = get_hv("warnings::_Bits", GV_ADD);
+    SV *bits_all = newWSV(WARN_ALLstring);
+    sv_catsv(bits_all, newWSV(WARN_DEADALLstring));
+    sv_upgrade(bits_all, SVt_PVIV);
+    SvIV_set(bits_all, 0);
+    hv_store(bits, "all", 3, bits_all, 0);
     GvSV(last_bit) = newSViv(WARN_LAST_BIT);
     GvSV(bytes)    = newSViv(WARNsize);
 }

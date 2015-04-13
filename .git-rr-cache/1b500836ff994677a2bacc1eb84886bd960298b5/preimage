@@ -373,6 +373,8 @@ EOM
   print $warn tab(6, '#define WARN_MAX_BYTES'),	" $max_bytes\n";
   print $warn tab(6, '#define WARN_ALLstring'), ' "', '\125' x $warn_size, 
                                                 '\0' x ($max_bytes - $warn_size), "\"\n";
+  print $warn tab(6, '#define WARN_DEADALLstring'), ' "', '\252' x $warn_size,
+                                                '\0' x ($max_bytes - $warn_size), "\"\n";
   print $warn tab(6, '#define WARN_NONEstring'), ' "', ('\0' x $max_bytes), "\"\n";
   print $warn tab(6, '/*'), ' [', mkRange(@def), "] */\n";
   print $warn tab(6, '#define WARN_DEFAULTstring'), ' "',  mkOct($max_bytes, map $_ * 2, @def) , "\"\n" ;
