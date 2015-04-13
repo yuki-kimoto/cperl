@@ -293,7 +293,7 @@ PREINIT:
 PPCODE:
     if (!SvPOK(mask))
         mask = newWSV(WARN_NONEstring);
-    for (i=0; i<items; i++) {
+    for (i=1; i<items; i++) {
         SV *word = ST(i);
         if (SvPOK(word)) {
             if (memEQs(SvPVX(word), SvCUR(word), "FATAL")) {
@@ -330,9 +330,11 @@ PPCODE:
 void
 bits (...)
 PPCODE:
+    PUSHMARK(SP);
     PUSHs(&PL_sv_undef);
     if (!items)
         PUSHs(newSVpvs("all"));
+    PUTBACK;
     if (call_pv("warnings::_bits", G_SCALAR))
         XSRETURN(1);
     else
@@ -361,15 +363,21 @@ PPCODE:
         if (IsSet(SvPVX(mask), 1))
             do_vop(OP_BIT_OR, mask, mask, newWSV(w_all->deadbits));
     }
-    if (items) {
+    if (items >= 1) {
+        int i;
         SV *word = ST(1);
+        PUSHMARK(SP);
         PUSHs(mask);
         /* push @_, 'all' if @_==1 && ( $_[0] eq 'FATAL' || $_[0] eq 'NONFATAL' ); */
         if (items == 1 && (SvPOK(word)
                            && (memEQs(SvPVX(word), SvCUR(word), "FATAL")
                                || memEQs(SvPVX(word), SvCUR(word), "NONFATAL"))))
             PUSHs(newSVpvs("all"));
+        else for (i=1; i<items; i++) {
+            PUSHs(ST(i));
+        }
         /* ${^WARNING_BITS} = @_ ? _bits($mask, @_) : $mask | $Bits{all} ; */
+        PUTBACK;
         if (call_pv("warnings::_bits", G_SCALAR)) {
             PL_compiling.cop_warnings
                 = Perl_new_warnings_bitfield(aTHX_ PL_compiling.cop_warnings,
