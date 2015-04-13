@@ -114,7 +114,6 @@ struct Perl_warnings;
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
 
-
 static unsigned int
 warnings_hash (register const char *str, register unsigned int len)
 {
@@ -620,13 +619,13 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     }
     if (flags & WFATAL) {
         const char* m = SvPVX(mask);
-        results_0 = (int)m[w->offset + WFATAL - 1];
-        if (!results_0) results_0 = (int)m[WFATAL - 1];
+        results_0 = IsSet(m, w->offset + WFATAL - 1);
+        if (!results_0) results_0 = IsSet(m, WFATAL - 1);
     }
     if (flags & WNORMAL) {
         const char* m = SvPVX(mask);
-        results_1 = (int)m[w->offset + WNORMAL - 1];
-        if (!results_1) results_1 = (int)m[WNORMAL - 1];
+        results_1 = IsSet(m, w->offset + WNORMAL - 1);
+        if (!results_1) results_1 = IsSet(m, WNORMAL - 1);
     }
     /* &enabled and &fatal_enabled */
     if (!has_message)
