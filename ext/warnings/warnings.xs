@@ -696,9 +696,10 @@ PPCODE:
     if (!items)
         PUSHs(newSVpvs("all"));
     PUTBACK;
-    if (call_pv("warnings::_bits", G_SCALAR))
+    if (call_pv("warnings::_bits", G_SCALAR)) {
+        SPAGAIN;
         XSRETURN(1);
-    else
+    } else
         XSRETURN_UNDEF;
 
 void
@@ -740,6 +741,7 @@ PPCODE:
         /* ${^WARNING_BITS} = @_ ? _bits($mask, @_) : $mask | $Bits{all} ; */
         PUTBACK;
         if (call_pv("warnings::_bits", G_SCALAR)) {
+            SPAGAIN;
             PL_compiling.cop_warnings
                 = Perl_new_warnings_bitfield(aTHX_ PL_compiling.cop_warnings,
                                         SvPVX(TOPs), SvCUR(TOPs));
@@ -888,7 +890,7 @@ PPCODE:
                 hv_store_ent(bith, name, bits, 0);
                 /* now extend "all" */
                 wd = (struct Perl_warnings_dyn *)Perl_warnings_lookup("all", 3);
-                wd->bits[ Off(last_bit) ] |= Bit(last_bit);
+                wd->bits[ Off(last_bit) ]   |= Bit(last_bit);
                 wd->deadbits[ Off(offset) ] |= Bit(offset);
                 if (Off(last_bit) > SvIVX(bytes))
                     SvIV_set(bytes, Off(last_bit));
