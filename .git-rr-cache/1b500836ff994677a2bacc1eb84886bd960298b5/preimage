@@ -33,8 +33,6 @@ use strict ;
 
 sub DEFAULT_ON  () { 1 }
 sub DEFAULT_OFF () { 2 }
-sub EXTRA       () { 4 }
-sub NO_VER      () { 99 }
 
 my $tree = {
 'all' => [ 5.008, {
@@ -125,17 +123,6 @@ my $tree = {
         'locale'        => [ 5.021, DEFAULT_ON],
 
          #'default'     => [ 5.008, DEFAULT_ON ],
-}],
-# we also reserve some room for provided custom warning categories from our core modules.
-# Note that most usages of warnings::register on CPAN is wrong.
-'registered' => [ NO_VER, {
-        'vars'          => [ NO_VER, EXTRA],
-        'overload'      => [ NO_VER, EXTRA],
-        'Class::Struct' => [ NO_VER, EXTRA],
-        'File::stat'    => [ NO_VER, EXTRA],
-        'Tie::Handle'   => [ NO_VER, EXTRA],
-        'Tie::Hash'     => [ NO_VER, EXTRA],
-        'Tie::Scalar'   => [ NO_VER, EXTRA],
 }]};
 
 my @def ;
@@ -184,26 +171,26 @@ sub orderValues
 
 sub walk
 {
-    my $tre = shift ;
-    my @list = () ;
-    my ($k, $v) ;
+    my $tre = shift;
+    my @list = ();
+    my ($k, $v);
 
     foreach $k (sort keys %$tre) {
 	$v = $tre->{$k};
-	die "duplicate key $k\n" if defined $list{$k} ;
+	die "duplicate key $k\n" if defined $list{$k};
 	die "Can't find key '$k'"
-	    if ! defined $NameToValue{uc $k} ;
-        push @{ $list{$k} }, $NameToValue{uc $k} ;
+	    if ! defined $NameToValue{uc $k};
+        push @{ $list{$k} }, $NameToValue{uc $k};
 	die "Value associated with key '$k' is not an ARRAY reference"
-	    if !ref $v || ref $v ne 'ARRAY' ;
+	    if !ref $v || ref $v ne 'ARRAY';
 
-	my ($ver, $rest) = @{ $v } ;
+	my ($ver, $rest) = @{ $v };
 	if (ref $rest)
 	  { push (@{ $list{$k} }, walk ($rest)) }
 	elsif ($rest == DEFAULT_ON)
 	  { push @def, $NameToValue{uc $k} }
 
-	push @list, @{ $list{$k} } unless !ref($rest) and $rest == EXTRA;
+	push @list, @{ $list{$k} };
     }
 
    return @list ;
@@ -355,7 +342,7 @@ EOM
   $index = orderValues();
   my $num_warnings = $index;
 
-  $max_bytes = 32;
+  $max_bytes = 32; # 256 = 32 * 8
   die <<EOM if $index > 255 ;
 Too many warnings categories -- max is 255
     rewrite packWARN* & unpackWARN* macros
@@ -363,19 +350,15 @@ EOM
 
   walk ($tree) ;
 
-  $index *= 2 ;
-  $warn_size = int($index / 8) + ($index % 8 != 0) ;
+  $index *= 2;
+  $warn_size = int($index / 8) + ($index % 8 != 0);
 
   my $k ;
   my $last_ver = 0;
   foreach $k (sort { $a <=> $b } keys %ValueToName) {
       my ($name, $version) = @{ $ValueToName{$k} };
       if ($last_ver != $version) {
-          if ($version != NO_VER) {
-              print $warn "\n/* Warnings Categories added in Perl $version */\n\n";
-          } else {
-              print $warn "\n/* Warnings Categories reserved for warnings::register */\n\n";
-          }
+          print $warn "\n/* Warnings Categories added in Perl $version */\n\n";
       }
       $name = uc $name;
       $name =~ y/:/_/;
@@ -388,8 +371,9 @@ EOM
   print $warn tab(6, '#define WARN_LAST_BIT'),	" $index\n";
   print $warn tab(6, '#define WARNsize'),	" $warn_size\n";
   print $warn tab(6, '#define WARN_MAX_BYTES'),	" $max_bytes\n";
-  print $warn tab(6, '#define WARN_ALLstring'), ' "', ('\125' x $max_bytes) , "\"\n";
-  print $warn tab(6, '#define WARN_NONEstring'), ' "', ('\0' x $max_bytes) , "\"\n";
+  print $warn tab(6, '#define WARN_ALLstring'), ' "', '\125' x $warn_size, 
+                                                '\0' x ($max_bytes - $warn_size), "\"\n";
+  print $warn tab(6, '#define WARN_NONEstring'), ' "', ('\0' x $max_bytes), "\"\n";
   print $warn tab(6, '/*'), ' [', mkRange(@def), "] */\n";
   print $warn tab(6, '#define WARN_DEFAULTstring'), ' "',  mkOct($max_bytes, map $_ * 2, @def) , "\"\n" ;
 
@@ -461,13 +445,10 @@ while (<$in>) {
 
 foreach my $k (sort { $a <=> $b } keys %ValueToName) {
     my ($name, $version) = @{ $ValueToName{$k} };
-    # with registered names we need the proper case. $name = lc $name;
+    # Note: keep the proper case
     my $offset = $k * 2;
     my $v = $list{$name};
     my @list = sort { $a <=> $b } @$v;
-    if ($name eq 'all') {
-        @list = 0 .. 255;
-    }
     my $bits     = mkOct($max_bytes, map $_ * 2 , @list);
     my $deadbits = mkOct($max_bytes, map $_ * 2 + 1 , @list);
     print $xs "$name, $offset, \"$bits\", \"$deadbits\"\n";
@@ -509,7 +490,7 @@ EOT
     s/^#?error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gnu-gperf\@gnu.org>."/#  error "gperf generated tables don't work with this non ISO-646 based character set."/m;
 
     # skip line directives. would be nice but they are wrong with gperf version 3.0.4
-    s/^#line .*?\n//gm;
+    # s/^#line .*?\n//gm;
 
     # C++ requires full struct initializers
     s/{-1},/{-1, 0, NULL, NULL},/g;

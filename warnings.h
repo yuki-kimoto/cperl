@@ -113,23 +113,12 @@
 #define WARN_MISSING			 66
 #define WARN_REDUNDANT			 67
 
-/* Warnings Categories reserved for warnings::register */
 
-#define WARN_REGISTERED			 68
-#define WARN_CLASS__STRUCT		 69
-#define WARN_FILE__STAT			 70
-#define WARN_TIE__HANDLE		 71
-#define WARN_TIE__HASH			 72
-#define WARN_TIE__SCALAR		 73
-#define WARN_OVERLOAD			 74
-#define WARN_VARS			 75
-
-
-#define NUM_WARNINGS			 76
-#define WARN_LAST_BIT			 152
-#define WARNsize			 19
+#define NUM_WARNINGS			 68
+#define WARN_LAST_BIT			 136
+#define WARNsize			 17
 #define WARN_MAX_BYTES			 32
-#define WARN_ALLstring			 "\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125"
+#define WARN_ALLstring			 "\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\125\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
 #define WARN_NONEstring			 "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
 /*					 [2,56,60,61,52,53,57,62,63,54,58,55,64,4,65,22,23,25] */
 #define WARN_DEFAULTstring		 "\20\1\0\0\0\120\4\0\0\0\0\0\0\125\25\125\5\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
