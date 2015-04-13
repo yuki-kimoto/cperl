@@ -1,5 +1,4 @@
-%{
-/*
+%{/* -*- mode: c; c-basic-offset: 4; -*-
 
 Copyright (C) 2015, cPanel Inc
 
