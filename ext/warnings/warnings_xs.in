@@ -354,7 +354,8 @@ PPCODE:
     if (PL_curcop->cop_warnings == pWARN_NONE)
         mask = newWSV(WARN_DEFAULTstring);
     else if (specialWARN(PL_curcop->cop_warnings))
-        mask = newWSV(WARN_ALLstring);
+        mask = (PL_dowarn & G_WARN_ALL_MASK)
+               ? newWSV(WARN_ALLstring) : newWSV(WARN_DEFAULTstring);
     else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
     b = SvPVX(mask);
@@ -414,7 +415,8 @@ PPCODE:
     if (PL_curcop->cop_warnings == pWARN_NONE)
         mask = newWSV(WARN_DEFAULTstring);
     else if (specialWARN(PL_curcop->cop_warnings))
-        mask = newWSV(WARN_ALLstring);
+        mask = (PL_dowarn & G_WARN_ALL_MASK)
+               ? newWSV(WARN_ALLstring) : newWSV(WARN_DEFAULTstring);
     else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
     b = SvPVX(mask);
@@ -520,6 +522,8 @@ PPCODE:
                 SV *deadbits = newWSV("");
                 char *b = SvPVX(bits);
                 char *d = SvPVX(deadbits);
+                Zero(b, WARN_MAX_BYTES, char);
+                Zero(d, WARN_MAX_BYTES, char);
                 b[ Off(last_bit) ] |= Bit(last_bit);
                 d[ Off(offset) ]   |= Bit(offset);
                 sv_catsv(bits, deadbits);
@@ -533,8 +537,13 @@ PPCODE:
                 if (Off(last_bit) > SvIVX(bytes))
                     SvIV_set(bytes, Off(last_bit));
                 SvIV_set(last_bitsv, offset + 1);
-                if (DEBUG_v_TEST_)
-                    Perl_deb("warnings::register_categories %s\n", n);
+                if (DEBUG_v_TEST_) {
+                    SV *dsv = newSVpvn("", 80);
+                    pv_pretty( dsv, b, WARN_MAX_BYTES, 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+                    Perl_deb("warnings::register_categories %s mask=%s\n", n, SvPVX(dsv));
+                    pv_pretty( dsv, wd->bits, WARN_MAX_BYTES, 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+                    Perl_deb("  all=%s, BYTES=%ld, LAST_BIT=%ld\n", SvPVX(dsv), SvIVX(bytes), offset+1);
+                }
             }
         }
     }
