@@ -377,14 +377,13 @@ PPCODE:
         PUSHMARK(SP);
         PUSHs(mask);
         /* push @_, 'all' if @_==1 && ( $_[0] eq 'FATAL' || $_[0] eq 'NONFATAL' ); */
-        if (items == 2 && (SvPOK(word)
-                           && (memEQs(SvPVX(word), SvCUR(word), "FATAL")
-                               || memEQs(SvPVX(word), SvCUR(word), "NONFATAL"))))
-            PUSHs(newSVpvs("all"));
-        else for (i=1; i<items; i++) {
+        for (i=1; i<items; i++)
             PUSHs(ST(i));
-        }
-        /* ${^WARNING_BITS} = @_ ? _bits($mask, @_) : $mask | $Bits{all} ; */
+        if (items == 2 && (SvPOK(word) &&
+                           (memEQs(SvPVX(word), SvCUR(word), "FATAL")
+                         || memEQs(SvPVX(word), SvCUR(word), "NONFATAL"))))
+            PUSHs(newSVpvs("all"));
+        /* ${^WARNING_BITS} = @_ ? _bits($mask, @_) : $mask | $Bits{all}; */
         PUTBACK;
         if (call_pv("warnings::_bits", G_SCALAR)) {
             SPAGAIN;
@@ -392,11 +391,11 @@ PPCODE:
                 = Perl_new_warnings_bitfield(aTHX_ PL_compiling.cop_warnings,
                                         SvPVX(TOPs), SvCUR(TOPs));
             if (isWARN_on(PL_compiling.cop_warnings, WARN_ONCE))
-                PL_dowarn |= G_WARN_ONCE ;
+                PL_dowarn |= G_WARN_ONCE;
             if (DEBUG_v_TEST_) {
                 SV *dsv = newSVpvn("", 80);
-                pv_pretty( dsv, (const char*)((STRLEN*)(PL_compiling.cop_warnings+1)), WARN_MAX_BYTES+4, 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
-                Perl_deb("warnings::import %s mask=%s\n", SvPVX(ST(1)), SvPVX(dsv));
+                pv_pretty( dsv, TOPpx, SvCUR(TOPs), 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+                Perl_deb("warnings::import %s mask=%s\n", SvPVX(word), SvPVX(dsv));
             }
             XSRETURN(1);
         } else
@@ -412,7 +411,7 @@ PPCODE:
             = Perl_new_warnings_bitfield(aTHX_ PL_compiling.cop_warnings,
                                     SvPVX(mask), SvCUR(mask));
         if (isWARN_on(PL_compiling.cop_warnings, WARN_ONCE))
-            PL_dowarn |= G_WARN_ONCE ;
+            PL_dowarn |= G_WARN_ONCE;
         mXPUSHs(mask);
         XSRETURN(1);
     }
@@ -471,7 +470,7 @@ PPCODE:
             = Perl_new_warnings_bitfield(aTHX_ PL_compiling.cop_warnings,
                                     SvPVX(mask), SvCUR(mask));
     if (isWARN_on(PL_compiling.cop_warnings, WARN_ONCE))
-        PL_dowarn |= G_WARN_ONCE ;
+        PL_dowarn |= G_WARN_ONCE;
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
         pv_pretty( dsv, SvPVX(mask), SvCUR(mask), 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
