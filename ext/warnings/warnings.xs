@@ -113,7 +113,6 @@ struct Perl_warnings;
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
 
-
 static unsigned int
 warnings_hash (register const char *str, register unsigned int len)
 {
@@ -686,13 +685,13 @@ PPCODE:
                     U8 *p;
                     STRLEN j;
                     SV *tmp = newWSV("");
-                    do_vop(OP_BIT_OR, tmp, newWSV(w->deadbits), newWSV(WARN_ALLstring));
+                    do_vop(OP_BIT_OR, tmp, newWSV(w->deadbits), newWSV("\3"));
                     /* scomplement is static */
                     for (p=(U8*)SvPVX(tmp), j=0; j<SvCUR(tmp); j++) {
                         const U8 c = *p;
                         *p++ = ~c;
                     }
-                    do_vop(OP_BIT_AND, mask, tmp, mask);
+                    do_vop(OP_BIT_AND, mask, mask, tmp);
                 }
             }
         }
