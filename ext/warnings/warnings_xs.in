@@ -61,7 +61,6 @@ Generated lookup function to access to read-only compile-time part of the hash.
 #define WMESSAGE 4
 
 #define AV_PUSH(av, val) av_store(av, AvFILLp(av)+1, val)
-#define newWSV(str) newSVpvn(str, WARN_MAX_BYTES)
 
 struct Perl_warnings { int name; const unsigned char offset; const char *bits; const char *deadbits; };
 struct Perl_warnings_dyn { int name; unsigned char offset; char *bits; char *deadbits; };
@@ -149,6 +148,18 @@ missing, 132, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0
 redundant, 134, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\100\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\200\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
 %%
 
+/* We really need to zero the bits */
+static SV *
+newWSV(const char *str) {
+    SV *sv = newSV(WARN_MAX_BYTES);
+    SvUPGRADE(sv, SVt_PV);
+    Zero(SvPVX(sv), WARN_MAX_BYTES, char);
+    Move(str, SvPVX(sv), WARN_MAX_BYTES, char);
+    SvPOK_on(sv);
+    SvCUR_set(sv, WARN_MAX_BYTES);
+    return sv;
+}
+
 struct Perl_warnings *
 Perl_warnings_lookup (register const char *str, register unsigned int len) {
     const struct Perl_warnings *w = warnings_const_lookup(str, len);
@@ -192,6 +203,8 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         message = ST(1);
         if (DEBUG_v_TEST_)
             Perl_deb("warnings::%s \"%s\"\n", sub, SvPVX(message));
+    } else {
+        message = newSVpvs("");
     }
     if (items > 0) {
         if (SvOBJECT(ST(0))) {
@@ -304,8 +317,7 @@ PPCODE:
                 no_fatal = 1;
             } else
             if ((w = Perl_warnings_lookup(SvPVX(word), SvCUR(word)))) {
-                const char *catmask = w->bits;
-                do_vop(OP_BIT_OR, mask, mask, newWSV(catmask));
+                do_vop(OP_BIT_OR, mask, mask, newWSV(w->bits));
                 if (fatal)
                     do_vop(OP_BIT_OR, mask, mask, newWSV(w->deadbits));
                 if (no_fatal) {
@@ -345,32 +357,27 @@ import (klass, ...)
     SV* klass
 PREINIT:
     SV *mask;
-    char *b;
     const struct Perl_warnings *w_all = Perl_warnings_lookup("all", 3);
 PPCODE:
     if (!SvPOK(klass))
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
-    if (PL_curcop->cop_warnings == pWARN_NONE)
-        mask = newWSV(WARN_DEFAULTstring);
-    else if (specialWARN(PL_curcop->cop_warnings))
-        mask = (PL_dowarn & G_WARN_ALL_MASK)
-               ? newWSV(WARN_ALLstring) : newWSV(WARN_DEFAULTstring);
+    if (specialWARN(PL_curcop->cop_warnings))
+        mask = (PL_dowarn & G_WARN_ON) ? newWSV(w_all->bits) : newWSV(WARN_DEFAULTstring);
     else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
-    b = SvPVX(mask);
-    if (IsSet(b, 0)) {
+    if (IsSet(SvPVX(mask), 0)) {
         do_vop(OP_BIT_OR, mask, mask, newWSV(w_all->bits));
         if (IsSet(SvPVX(mask), 1))
             do_vop(OP_BIT_OR, mask, mask, newWSV(w_all->deadbits));
     }
-    if (items >= 1) {
+    if (items > 1) {
         int i;
         SV *word = ST(1);
         PUSHMARK(SP);
         PUSHs(mask);
         /* push @_, 'all' if @_==1 && ( $_[0] eq 'FATAL' || $_[0] eq 'NONFATAL' ); */
-        if (items == 1 && (SvPOK(word)
+        if (items == 2 && (SvPOK(word)
                            && (memEQs(SvPVX(word), SvCUR(word), "FATAL")
                                || memEQs(SvPVX(word), SvCUR(word), "NONFATAL"))))
             PUSHs(newSVpvs("all"));
@@ -386,11 +393,21 @@ PPCODE:
                                         SvPVX(TOPs), SvCUR(TOPs));
             if (isWARN_on(PL_compiling.cop_warnings, WARN_ONCE))
                 PL_dowarn |= G_WARN_ONCE ;
+            if (DEBUG_v_TEST_) {
+                SV *dsv = newSVpvn("", 80);
+                pv_pretty( dsv, (const char*)((STRLEN*)(PL_compiling.cop_warnings+1)), WARN_MAX_BYTES+4, 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+                Perl_deb("warnings::import %s mask=%s\n", SvPVX(ST(1)), SvPVX(dsv));
+            }
             XSRETURN(1);
         } else
             XSRETURN_UNDEF;
     } else {
         do_vop(OP_BIT_OR, mask, mask, newWSV(w_all->bits));
+        if (DEBUG_v_TEST_) {
+            SV *dsv = newSVpvn("", 80);
+            pv_pretty( dsv, SvPVX(mask), SvCUR(mask), 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+            Perl_deb("warnings::import mask=%s\n", SvPVX(dsv));
+        }
         PL_compiling.cop_warnings
             = Perl_new_warnings_bitfield(aTHX_ PL_compiling.cop_warnings,
                                     SvPVX(mask), SvCUR(mask));
@@ -405,29 +422,25 @@ unimport (klass, ...)
    SV* klass
 PREINIT:
     SV *mask;
-    char *b;
     int i;
     const struct Perl_warnings *w_all = Perl_warnings_lookup("all", 3);
 PPCODE:
     if (!SvPOK(klass))
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
-    if (PL_curcop->cop_warnings == pWARN_NONE)
-        mask = newWSV(WARN_DEFAULTstring);
-    else if (specialWARN(PL_curcop->cop_warnings))
-        mask = (PL_dowarn & G_WARN_ALL_MASK)
-               ? newWSV(WARN_ALLstring) : newWSV(WARN_DEFAULTstring);
+    if (specialWARN(PL_curcop->cop_warnings))
+        mask = (PL_dowarn & G_WARN_ON) ? newWSV(w_all->bits) : newWSV(WARN_DEFAULTstring);
     else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
-    b = SvPVX(mask);
-    if (IsSet(b, 0)) {
+    if (IsSet(SvPVX(mask), 0)) {
         do_vop(OP_BIT_OR, mask, mask, newWSV(w_all->bits));
         if (IsSet(SvPVX(mask), 1))
             do_vop(OP_BIT_OR, mask, mask, newWSV(w_all->deadbits));
     }
     /* push @_, 'all' if !@_ || @_==1 && $_[0] eq 'FATAL'; */
-    if ((items == 0) || (items == 1 && (SvPOK(ST(0)) && memEQs(SvPVX(ST(0)), SvCUR(ST(0)), "FATAL")))) {
+    if ((items == 1) || (items == 2 && (SvPOK(ST(0)) && memEQs(SvPVX(ST(0)), SvCUR(ST(0)), "FATAL")))) {
         PUSHs(newSVpvs("all"));
+        ax--;
         items++;
     }
     for (i=1; i<items; i++) {
@@ -459,6 +472,14 @@ PPCODE:
                                     SvPVX(mask), SvCUR(mask));
     if (isWARN_on(PL_compiling.cop_warnings, WARN_ONCE))
         PL_dowarn |= G_WARN_ONCE ;
+    if (DEBUG_v_TEST_) {
+        SV *dsv = newSVpvn("", 80);
+        pv_pretty( dsv, SvPVX(mask), SvCUR(mask), 80, NULL, NULL, PERL_PV_PRETTY_DUMP);
+        if (items > 1)
+            Perl_deb("warnings::unimport %s mask=%s\n", SvPVX(ST(1)), SvPVX(dsv));
+        else
+            Perl_deb("warnings::unimport mask=%s\n", SvPVX(dsv));
+    }
     mXPUSHs(mask);
     XSRETURN(1);
 
@@ -522,8 +543,6 @@ PPCODE:
                 SV *deadbits = newWSV("");
                 char *b = SvPVX(bits);
                 char *d = SvPVX(deadbits);
-                Zero(b, WARN_MAX_BYTES, char);
-                Zero(d, WARN_MAX_BYTES, char);
                 b[ Off(last_bit) ] |= Bit(last_bit);
                 d[ Off(offset) ]   |= Bit(offset);
                 sv_catsv(bits, deadbits);
