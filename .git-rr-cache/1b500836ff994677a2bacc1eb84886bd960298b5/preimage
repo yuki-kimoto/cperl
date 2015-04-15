@@ -447,7 +447,7 @@ while (<$in>) {
 
 foreach my $k (sort { $a <=> $b } keys %ValueToName) {
     my ($name, $version) = @{ $ValueToName{$k} };
-    # Note: keep the proper case
+    # Note: keeping the proper case
     my $offset = $k * 2;
     my $v = $list{$name};
     my @list = sort { $a <=> $b } @$v;
