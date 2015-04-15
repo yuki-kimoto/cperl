@@ -97,8 +97,8 @@ Generated lookup function to access to read-only compile-time part of the hash.
 
 #define AV_PUSH(av, val) av_store(av, AvFILLp(av)+1, val)
 
-struct Perl_warnings { int name; const unsigned char offset; const char *bits; const char *deadbits; };
-struct Perl_warnings_dyn { int name; unsigned char offset; char *bits; char *deadbits; };
+struct Perl_warnings { int name; const U8 offset; const char *bits; const char *deadbits; };
+struct Perl_warnings_dyn { int name; U8 offset; char *bits; char *deadbits; };
 struct Perl_warnings_dyn ws;
 struct Perl_warnings *
 Perl_warnings_lookup (register const char *str, register unsigned int len);
@@ -112,7 +112,6 @@ struct Perl_warnings;
 #define MIN_HASH_VALUE 4
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
-
 
 static unsigned int
 warnings_hash (register const char *str, register unsigned int len)
