@@ -635,7 +635,8 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     }
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
-        Perl_deb("warnings::%s depth=%d, mask=%s\n", sub, i, pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
+        Perl_deb("warnings::%s depth=%d, mask=%s\n", sub, i,
+                 pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         SvREFCNT_dec(dsv);
     }
     if (flags & WFATAL) {
@@ -735,13 +736,6 @@ PPCODE:
         mask = (PL_dowarn & G_WARN_ON) ? newWSVpv(w_all->bits) : newWSVpvh(WARN_DEFAULTstring);
     else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
-#if 0
-    if (DEBUG_v_TEST_) {
-        SV *dsv = newSVpvn("", 80);
-        Perl_deb("import mask=%s\n", pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
-        SvREFCNT_dec(dsv);
-    }
-#endif
 
     if (IsSet(SvPVX(mask), 0)) {
         do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->bits));
@@ -771,7 +765,8 @@ PPCODE:
                 PL_dowarn |= G_WARN_ONCE;
             if (DEBUG_v_TEST_) {
                 SV *dsv = newSVpvn("", 80);
-                Perl_deb("warnings::import %s mask=%s\n", SvPVX(word), pv_display( dsv, TOPpx, SvCUR(TOPs), SvCUR(TOPs), 80));
+                Perl_deb("warnings::import %s mask=%s\n", SvPVX(word),
+                         pv_display( dsv, TOPpx, SvCUR(TOPs), SvCUR(TOPs), 80));
                 SvREFCNT_dec(dsv);
             }
             XSRETURN(1);
@@ -808,11 +803,6 @@ PPCODE:
         mask = (PL_dowarn & G_WARN_ON) ? newWSVpv(w_all->bits) : newWSVpvh(WARN_DEFAULTstring);
     else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
-    if (DEBUG_v_TEST_) {
-        SV *dsv = newSVpvn("", 80);
-        Perl_deb("unimport mask=%s\n", pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
-        SvREFCNT_dec(dsv);
-    }
     if (IsSet(SvPVX(mask), 0)) {
         do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->bits));
         if (IsSet(SvPVX(mask), 1))
@@ -856,7 +846,8 @@ PPCODE:
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
         if (items > 1)
-            Perl_deb("warnings::unimport %s mask=%s\n", SvPVX(ST(1)), pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
+            Perl_deb("warnings::unimport %s mask=%s\n", SvPVX(ST(1)),
+                     pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         else
             Perl_deb("warnings::unimport mask=%s\n", pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         SvREFCNT_dec(dsv);
@@ -939,8 +930,10 @@ PPCODE:
                 SvIV_set(last_bitsv, offset + 1);
                 if (DEBUG_v_TEST_) {
                     SV *dsv = newSVpvn("", 80);
-                    Perl_deb("warnings::register_categories %s mask=%s\n", n, pv_display( dsv, b, WARN_MAX_BYTES, WARN_MAX_BYTES, 80));
-                    Perl_deb("  all=%s, BYTES=%ld, LAST_BIT=%ld\n", pv_display( dsv, wd->bits, WARN_MAX_BYTES, WARN_MAX_BYTES, 80),
+                    Perl_deb("warnings::register_categories %s mask=%s\n", n,
+                             pv_display( dsv, b, WARN_MAX_BYTES, WARN_MAX_BYTES, 80));
+                    Perl_deb("  all=%s, BYTES=%ld, LAST_BIT=%ld\n",
+                             pv_display( dsv, wd->bits, WARN_MAX_BYTES, WARN_MAX_BYTES, 80),
                              SvIVX(bytes), offset+1);
                     SvREFCNT_dec(dsv);
                 }
