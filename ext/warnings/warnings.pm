@@ -9,7 +9,7 @@ unless ( __FILE__ =~ /(^|[\/\\])\Q${\__PACKAGE__}\E\.pmc?$/ ) {
     die("Incorrect use of pragma '${\__PACKAGE__}' at $f line $l.\n");
 }
 
-if (eval "require XSLoader;" and defined &XSLoader::load) {
+if (defined &XSLoader::load) {
   XSLoader::load(__PACKAGE__, $VERSION);
 } else { # for bootstrapping with miniperl
   eval 'sub register_categories {} sub warnif {}';
