@@ -701,6 +701,11 @@ PPCODE:
                     }
                     do_vop(OP_BIT_AND, mask, mask, tmp);
                 }
+            } else {
+                SV *msg = newSVpvs("Unknown warnings category '");
+                sv_catsv(msg, word);
+                sv_catpvs(msg, "'");
+                croak_sv(carp_shortmess(ax, msg));
             }
         }
     }
