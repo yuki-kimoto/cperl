@@ -200,6 +200,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     int i, is_obj = 0;
     int has_message = flags & WMESSAGE;
     int results_0 = 0, results_1 = 0;
+    STRLEN * old_warnings;
 
     if (!(items == 1 || items == (has_message ? 2 : 0))) {
         SV *msg = newSVpvs("");
@@ -207,13 +208,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         croak_sv(carp_shortmess(ax, msg));
         /*croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");*/
     }
-    if (has_message) {
-        message = ST(1);
-        if (DEBUG_v_TEST_)
-            Perl_deb("warnings::%s \"%s\"\n", sub, SvPVX(message));
-    } else {
-        message = newSVpvs("");
-    }
+    message = has_message ? ST(1) : newSVpvs("");
     if (items > 0) {
         if (SvOBJECT(ST(0))) {
             category = HvNAME(SvSTASH(ST(0)));
@@ -226,8 +221,6 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     } else {
         category = HvNAME(CopSTASH(PL_curcop));
     }
-    if (DEBUG_v_TEST_)
-        Perl_deb("warnings::%s category=%s\n", sub, category);
 
     w = Perl_warnings_lookup(category, strlen(category));
     if (!w) {
@@ -241,39 +234,44 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
 
     if (is_obj) {
         /* TODO: walk the callstack and find category */
+        if (DEBUG_v_TEST_)
+            Perl_deb("warnings::%s TODO is_obj => cx_depth=0\n", sub);
         i = 0;
     } else {
         i = short_error_loc();
     }
-    if ((cx = caller_cx(i, NULL))) {
-        STRLEN * const old_warnings = cx->blk_oldcop->cop_warnings;
 
-        if  (old_warnings == pWARN_NONE)
-            mask = newWSVpvh(WARN_NONEstring);
-        else if (old_warnings == pWARN_STD && (PL_dowarn & G_WARN_ON) == 0)
-            mask = &PL_sv_undef;
-        else if (old_warnings == pWARN_ALL ||
-                 (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
-          /* depends on register_categories(). See below.
-             if extended, get the extended all mask. */
-          HV * const bits = get_hv("warnings::_Bits", 0);
-          if (bits) {
-              w = Perl_warnings_lookup("all", 3);
-              mask = newWSVpv(w->bits);
-          }
-          else {
-              mask = newWSVpvh(WARN_ALLstring);
-          }
+    if (i == 0) /* A XS speciality */
+        old_warnings = PL_curcop->cop_warnings;
+    else if ((cx = caller_cx(i, NULL)))
+        old_warnings = cx->blk_oldcop->cop_warnings;
+    else
+        old_warnings = pWARN_STD;
+
+    if  (old_warnings == pWARN_NONE)
+        mask = newWSVpvh(WARN_NONEstring);
+    else if (old_warnings == pWARN_STD && !(PL_dowarn & G_WARN_ON))
+        mask = newWSVpvh(WARN_DEFAULTstring);
+    else if (old_warnings == pWARN_ALL ||
+             (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
+        /* depends on register_categories(). See below.
+           if extended, get the extended all mask. */
+        HV * const bits = get_hv("warnings::_Bits", 0);
+        if (bits) {
+            w = Perl_warnings_lookup("all", 3);
+            mask = newWSVpv(w->bits);
         }
         else {
-            mask = newSVpvn((char *) (old_warnings + 1), old_warnings[0]);
+            mask = newWSVpvh(WARN_ALLstring);
         }
-    } else {
-        mask = newWSVpvh(WARN_DEFAULTstring);
+    }
+    else {
+        assert(!specialWARN(old_warnings));
+        mask = newSVpvn((char *) (old_warnings + 1), old_warnings[0]);
     }
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
-        Perl_deb("warnings::%s depth=%d, mask=%s\n", sub, i,
+        Perl_deb("warnings::%s %s mask=%s\n", sub, category,
                  pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         SvREFCNT_dec(dsv);
     }
