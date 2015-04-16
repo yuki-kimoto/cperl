@@ -204,11 +204,18 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
 
     if (!(items == 1 || items == (has_message ? 2 : 0))) {
         SV *msg = newSVpvs("");
-        sv_catpvf(msg, "Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
+        sv_catpvf(msg, "Usage: warnings::%s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
         croak_sv(carp_shortmess(ax, msg));
         /*croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");*/
     }
-    message = has_message ? ST(1) : newSVpvs("");
+    if (has_message) {
+        message = items == 1 ? ST(0) : ST(1);
+        if (SvREADONLY(message))
+            message = newSVpvn(SvPVX(message), SvCUR(message));
+        items--;
+    } else {
+        message = newSVpvs("");
+    }
     if (items > 0) {
         if (SvOBJECT(ST(0))) {
             category = HvNAME(SvSTASH(ST(0)));
@@ -233,10 +240,16 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     }
 
     if (is_obj) {
-        /* TODO: walk the callstack and find category */
+        /* walk the callstack and find category */
+	SV *eval = newSVpvs("my ($i, $pkg) = (2);\n"
+"  while (do { { package DB; $pkg = (caller($i++))[0] } } ) {\n"
+"    last unless @DB::args && $DB::args[0] =~ /^");
+        sv_catpv(eval, category);
+        sv_catpvs(eval, "=/;} $i");
+        if (eval_sv(eval, G_SCALAR)) i = TOPi - 2;
+        else i = 0;
         if (DEBUG_v_TEST_)
-            Perl_deb("warnings::%s TODO is_obj => cx_depth=0\n", sub);
-        i = 0;
+            Perl_deb("warnings::%s is_obj => cx_depth=%d\n", sub, i);
     } else {
         i = short_error_loc();
     }
@@ -246,24 +259,16 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     else if ((cx = caller_cx(i, NULL)))
         old_warnings = cx->blk_oldcop->cop_warnings;
     else
-        old_warnings = pWARN_STD;
+        old_warnings = pWARN_NONE;
 
     if  (old_warnings == pWARN_NONE)
         mask = newWSVpvh(WARN_NONEstring);
     else if (old_warnings == pWARN_STD && !(PL_dowarn & G_WARN_ON))
         mask = newWSVpvh(WARN_DEFAULTstring);
     else if (old_warnings == pWARN_ALL ||
-             (old_warnings == pWARN_STD && PL_dowarn & G_WARN_ON)) {
-        /* depends on register_categories(). See below.
-           if extended, get the extended all mask. */
-        HV * const bits = get_hv("warnings::_Bits", 0);
-        if (bits) {
-            w = Perl_warnings_lookup("all", 3);
-            mask = newWSVpv(w->bits);
-        }
-        else {
-            mask = newWSVpvh(WARN_ALLstring);
-        }
+             (old_warnings == pWARN_STD && (PL_dowarn & G_WARN_ON))) {
+        const struct Perl_warnings *w_all = Perl_warnings_lookup("all", 3);
+        mask = newWSVpv(w_all->bits);
     }
     else {
         assert(!specialWARN(old_warnings));
@@ -271,19 +276,19 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     }
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
-        Perl_deb("warnings::%s %s mask=%s\n", sub, category,
+        Perl_deb("warnings::%s %s %d %s\n", sub, category, i,
                  pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         SvREFCNT_dec(dsv);
     }
     if (flags & WFATAL) {
         const char* m = SvPVX(mask);
         results_0 = IsSet(m, w->offset + WFATAL - 1);
-        if (!results_0) results_0 = IsSet(m, WFATAL - 1);
+        if (w->offset && !results_0) results_0 = IsSet(m, WFATAL - 1);
     }
     if (flags & WNORMAL) {
         const char* m = SvPVX(mask);
         results_1 = IsSet(m, w->offset + WNORMAL - 1);
-        if (!results_1) results_1 = IsSet(m, WNORMAL - 1);
+        if (w->offset && !results_1) results_1 = IsSet(m, WNORMAL - 1);
     }
     /* &enabled and &fatal_enabled */
     if (!has_message)
@@ -304,7 +309,7 @@ static void
 _set_warn_bits(const char *func, const char* arg, SV *mask) {
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
-        Perl_deb("warnings::%s %s mask=%s\n", func, arg,
+        Perl_deb("warnings::%s %s %s\n", func, arg,
                  pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         SvREFCNT_dec(dsv);
     }
@@ -567,7 +572,7 @@ PPCODE:
                 SvIV_set(last_bitsv, offset + 1);
                 if (DEBUG_v_TEST_) {
                     SV *dsv = newSVpvn("", 80);
-                    Perl_deb("warnings::register_categories %s mask=%s\n", n,
+                    Perl_deb("warnings::register_categories %s %s\n", n,
                              pv_display( dsv, b, WARN_MAX_BYTES, WARN_MAX_BYTES, 80));
                     Perl_deb("  all=%s, BYTES=%ld, LAST_BIT=%ld\n",
                              pv_display( dsv, wd->bits, WARN_MAX_BYTES, WARN_MAX_BYTES, 80),
