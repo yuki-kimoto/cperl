@@ -14,6 +14,19 @@ if (defined &XSLoader::load) {
 } else { # for bootstrapping with miniperl
   eval 'sub register_categories {} sub warnif {}';
 }
+
+sub MESSAGE () { 4 };
+sub FATAL () { 2 };
+sub NORMAL () { 1 };
+
+sub enabled { _chk("enabled", NORMAL, @_); }
+
+sub fatal_enabled {_chk("fatal_enabled", FATAL, @_); }
+
+sub warn { _chk("warn", FATAL | MESSAGE, @_); }
+
+sub warnif { _chk("warnif", NORMAL | FATAL | MESSAGE, @_); }
+
 1;
 __END__
 =head1 NAME

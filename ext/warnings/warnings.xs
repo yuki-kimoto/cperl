@@ -113,6 +113,7 @@ struct Perl_warnings;
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
 
+
 static unsigned int
 warnings_hash (register const char *str, register unsigned int len)
 {
@@ -860,33 +861,9 @@ PPCODE:
     XSRETURN(1);
 
 void
-enabled (...)
+_chk (SV *sub, IV flags, ...)
 PPCODE:
-    if (_chk("enabled", WNORMAL, ax))
-        XSRETURN_YES;
-    else
-        XSRETURN_NO;
-
-void
-fatal_enabled (...)
-PPCODE:
-    if (_chk("fatal_enabled", WFATAL, ax))
-        XSRETURN_YES;
-    else
-        XSRETURN_NO;
-
-void
-warn (...)
-PPCODE:
-    if (_chk("warn", WFATAL|WMESSAGE, ax))
-        XSRETURN_YES;
-    else
-        XSRETURN_NO;
-
-void
-warnif (...)
-PPCODE:
-    if (_chk("warnif", WNORMAL|WFATAL|WMESSAGE, ax))
+    if (_chk(SvPVX(sub), flags, ax+2))
         XSRETURN_YES;
     else
         XSRETURN_NO;
