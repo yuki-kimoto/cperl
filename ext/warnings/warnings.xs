@@ -609,10 +609,11 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
 "    last unless @DB::args && $DB::args[0] =~ /^");
         sv_catpv(eval, category);
         sv_catpvs(eval, "=/;} $i");
-        if (eval_sv(eval, G_SCALAR)) i = TOPi - 2;
+        if (eval_sv(eval, G_SCALAR)) { SPAGAIN; i = TOPi - 2; }
         else i = 0;
         if (DEBUG_v_TEST_)
             Perl_deb("warnings::%s is_obj => cx_depth=%d\n", sub, i);
+        SvREFCNT_dec(eval);
     } else {
         i = short_error_loc();
     }
@@ -653,6 +654,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         results_1 = IsSet(m, w->offset + WNORMAL - 1);
         if (w->offset && !results_1) results_1 = IsSet(m, WNORMAL - 1);
     }
+    SvREFCNT_dec(mask);
     /* &enabled and &fatal_enabled */
     if (!has_message)
         return results_0 ? results_0 : results_1;
@@ -733,6 +735,7 @@ PPCODE:
                         *p++ = ~c;
                     }
                     do_vop(OP_BIT_AND, mask, mask, tmp);
+                    SvREFCNT_dec(tmp);
                 }
             } else {
                 SV *msg = newSVpvs("Unknown warnings category '");
@@ -749,9 +752,9 @@ void
 bits (...)
 PPCODE:
     PUSHMARK(SP);
-    PUSHs(&PL_sv_undef);
+    mXPUSHs(&PL_sv_undef);
     if (!items)
-        PUSHs(newSVpvs("all"));
+        mXPUSHs(newSVpvs("all"));
     PUTBACK;
     if (call_pv("warnings::_bits", G_SCALAR)) {
         SPAGAIN;
@@ -783,7 +786,8 @@ PPCODE:
         int i;
         SV *word = ST(1);
         PUSHMARK(SP);
-        PUSHs(mask);
+        mXPUSHs(mask);
+
         /* push @_, 'all' if @_==1 && ( $_[0] eq 'FATAL' || $_[0] eq 'NONFATAL' ); */
         for (i=1; i<items; i++)
             PUSHs(ST(i));
@@ -828,7 +832,7 @@ PPCODE:
     }
     /* push @_, 'all' if !@_ || @_==1 && $_[0] eq 'FATAL'; */
     if ((items == 1) || (items == 2 && (SvPOK(ST(0)) && memEQs(SvPVX(ST(0)), SvCUR(ST(0)), "FATAL")))) {
-        PUSHs(newSVpvs("all"));
+        mPUSHs(newSVpvs("all"));
         ax--;
         items++;
     }
@@ -848,6 +852,7 @@ PPCODE:
                     *p++ = ~c;
                 }
                 do_vop(OP_BIT_AND, mask, mask, catmask);
+                SvREFCNT_dec(catmask);
             } else {
                 SV *msg = newSVpvs("Unknown warnings category '");
                 sv_catsv(msg, word);
