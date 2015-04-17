@@ -98,7 +98,7 @@ Generated lookup function to access to read-only compile-time part of the hash.
 #define AV_PUSH(av, val) av_store(av, AvFILLp(av)+1, val)
 
 struct Perl_warnings { int name; const U8 offset; const char *bits; const char *deadbits; };
-struct Perl_warnings_dyn { int name; U8 offset; char *bits; char *deadbits; };
+struct Perl_warnings_dyn { int name; U8 offset; char *bits; char *deadbits; SV *base; };
 struct Perl_warnings_dyn ws;
 struct Perl_warnings *
 Perl_warnings_lookup (register const char *str, register unsigned int len);
@@ -532,16 +532,17 @@ newWSV(const char *str, const int len) {
 struct Perl_warnings *
 Perl_warnings_lookup (register const char *str, register unsigned int len) {
     const struct Perl_warnings *w = warnings_const_lookup(str, len);
-    if (!w || memEQs(str, 3, "all")) {
+    if (memEQs(str, len, "all") || !w) {
         SV **bit;
         HV * const bits = get_hv("warnings::_Bits", 0);
         if (bits && ((bit = hv_fetch(bits, str, len, FALSE)))) {
-            const char *p = SvPVX(*bit);
+            char *p = SvPVX(*bit);
             struct Perl_warnings_dyn *w1 = &ws;
             STRLEN l = SvCUR(*bit) / 2;
             w1->offset   = SvIVX(*bit);
-            w1->bits     = SvPVX(newSVpvn(p, l));
-            w1->deadbits = SvPVX(newSVpvn(p + l, l));
+            w1->bits     = p;
+            w1->deadbits = p + l;
+            w1->base = *bit;
             return (struct Perl_warnings *)w1;
         } else {
             return NULL;
@@ -922,22 +923,31 @@ PPCODE:
                 d[ Off(offset) ]   |= Bit(offset);
                 sv_catsv(bits, deadbits);
                 sv_upgrade(bits, SVt_PVIV);
-                SvIV_set(bits, offset);
+                SvIV_set(bits, last_bit);
                 hv_store_ent(bith, name, bits, 0);
                 /* now extend "all" */
                 wd = (struct Perl_warnings_dyn *)Perl_warnings_lookup("all", 3);
                 wd->bits[ Off(last_bit) ]   |= Bit(last_bit);
                 wd->deadbits[ Off(offset) ] |= Bit(offset);
-                if (Off(last_bit) > SvIVX(bytes))
+                /* So far we go with a static length */
+                /*Move(wd->deadbits, SvPVX(wd->base)+WARN_MAX_BYTES, WARN_MAX_BYTES, char);*/
+                /* we dont resize this "all" SV, so no need to store it back */
+                /*hv_stores(bith, "all", wd->base);*/
+                SvIV_set(bits, last_bit);
+                last_bit = offset + 1;
+                if (Off(last_bit) > SvIVX(bytes)) {
                     SvIV_set(bytes, Off(last_bit));
-                SvIV_set(last_bitsv, offset + 1);
+                    if (Off(last_bit) > WARN_MAX_BYTES) /* This is a new cperl limitation */
+                        croak("Internal error: Cannot register more than 255 warnings");
+                }
+                SvIV_set(last_bitsv, last_bit);
                 if (DEBUG_v_TEST_) {
                     SV *dsv = newSVpvn("", 80);
                     Perl_deb("warnings::register_categories %s %s\n", n,
-                             pv_display( dsv, b, WARN_MAX_BYTES, WARN_MAX_BYTES, 80));
-                    Perl_deb("  all=%s, BYTES=%ld, LAST_BIT=%ld\n",
+                             pv_display( dsv, SvPVX(bits), WARN_MAX_BYTES, WARN_MAX_BYTES, 80));
+                    Perl_deb(" all=%s, BYTES=%ld, LAST_BIT=%ld\n",
                              pv_display( dsv, wd->bits, WARN_MAX_BYTES, WARN_MAX_BYTES, 80),
-                             SvIVX(bytes), offset+1);
+                             SvIVX(bytes), last_bit);
                     SvREFCNT_dec(dsv);
                 }
             }
