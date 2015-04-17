@@ -408,7 +408,7 @@ PPCODE:
                 SV *msg = newSVpvs("Unknown warnings category '");
                 sv_catsv(msg, word);
                 sv_catpvs(msg, "'");
-#if 1
+#if 0
                 PUSHMARK(SP);
                 mXPUSHs(msg);
                 PUTBACK;
