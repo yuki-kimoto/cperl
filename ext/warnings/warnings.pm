@@ -15,6 +15,13 @@ if (defined &XSLoader::load) {
   eval 'sub register_categories {} sub warnif {}';
 }
 
+sub Croaker {
+    require Carp; # this initializes %CarpInternal
+    local $Carp::CarpInternal{'warnings'};
+    delete $Carp::CarpInternal{'warnings'};
+    Carp::croak(@_);
+}
+
 sub MESSAGE () { 4 };
 sub FATAL () { 2 };
 sub NORMAL () { 1 };

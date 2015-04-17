@@ -113,7 +113,6 @@ struct Perl_warnings;
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
 
-
 static unsigned int
 warnings_hash (register const char *str, register unsigned int len)
 {
@@ -566,10 +565,17 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     STRLEN * old_warnings;
 
     if (!(items == 1 || items == (has_message ? 2 : 0))) {
+#if 1
         SV *msg = newSVpvs("");
         sv_catpvf(msg, "Usage: warnings::%s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
-        croak_sv(carp_shortmess(ax, msg));
-        /*croak("Usage %s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");*/
+        PUSHMARK(SP);
+        mXPUSHs(msg);
+        PUTBACK;
+        call_pv("warnings::Croaker", G_DISCARD);
+        /*croak_sv(carp_shortmess(ax, msg));*/
+#else
+        croak("Usage: warnings::%s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
+#endif
     }
     if (has_message) {
         message = items == 1 ? ST(0) : ST(1);
@@ -586,7 +592,14 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         } else if (SvPOK(ST(0))) {
             category = SvPVX(ST(0));
         } else {
+#if 1
+            PUSHMARK(SP);
+            mXPUSHs(newSVpvs("not an object"));
+            PUTBACK;
+            call_pv("warnings::Croaker", G_DISCARD);
+#else
             croak_sv(carp_shortmess(ax, newSVpvs("not an object")));
+#endif
         }
     } else {
         category = HvNAME(CopSTASH(PL_curcop));
@@ -599,7 +612,14 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
             sv_catpvf(msg, "Unknown warnings category '%s'", category);
         else
             sv_catpvf(msg, "package '%s' not registered for warnings", category);
+#if 1
+        PUSHMARK(SP);
+        mXPUSHs(msg);
+        PUTBACK;
+        call_pv("warnings::Croaker", G_DISCARD);
+#else
         croak_sv(carp_shortmess(ax, msg));
+#endif
     }
 
     if (is_obj) {
@@ -661,8 +681,16 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     /* &warnif, and the category is neither enabled as warning nor as fatal */
     if (flags == (WNORMAL | WFATAL | WMESSAGE) && !(results_0 | results_1))
         return 0;
-    if (results_0)
+    if (results_0) {
+#if 1
+        PUSHMARK(SP);
+        XPUSHs(message);
+        PUTBACK;
+        call_pv("warnings::Croaker", G_DISCARD);
+#else
         croak_sv(carp_longmess(ax, message));
+#endif
+    }
     /* will always get here for &warn. will only get here for &warnif if the
        category is enabled */
     warn_sv(carp_shortmess(ax, message));
@@ -741,7 +769,14 @@ PPCODE:
                 SV *msg = newSVpvs("Unknown warnings category '");
                 sv_catsv(msg, word);
                 sv_catpvs(msg, "'");
+#if 1
+                PUSHMARK(SP);
+                mXPUSHs(msg);
+                PUTBACK;
+                call_pv("warnings::Croaker", G_DISCARD);
+#else
                 croak_sv(carp_shortmess(ax, msg));
+#endif
             }
         }
     }
@@ -857,7 +892,14 @@ PPCODE:
                 SV *msg = newSVpvs("Unknown warnings category '");
                 sv_catsv(msg, word);
                 sv_catpvs(msg, "'");
+#if 1
+                PUSHMARK(SP);
+                mXPUSHs(msg);
+                PUTBACK;
+                call_pv("warnings::Croaker", G_DISCARD);
+#else
                 croak_sv(carp_shortmess(ax, msg));
+#endif
             }
         }
     }
