@@ -56,6 +56,7 @@ Generated lookup function to access to read-only compile-time part of the hash.
 
 #include "warnings.h"
 
+#define USE_PP_CARP
 #define WNORMAL  1
 #define WFATAL   2
 #define WMESSAGE 4
@@ -204,7 +205,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     STRLEN * old_warnings;
 
     if (!(items == 1 || items == (has_message ? 2 : 0))) {
-#if 1
+#ifdef USE_PP_CARP
         SV *msg = newSVpvs("");
         sv_catpvf(msg, "Usage: warnings::%s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
         PUSHMARK(SP);
@@ -231,7 +232,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         } else if (SvPOK(ST(0))) {
             category = SvPVX(ST(0));
         } else {
-#if 1
+#ifdef USE_PP_CARP
             PUSHMARK(SP);
             mXPUSHs(newSVpvs("not an object"));
             PUTBACK;
@@ -251,7 +252,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
             sv_catpvf(msg, "Unknown warnings category '%s'", category);
         else
             sv_catpvf(msg, "package '%s' not registered for warnings", category);
-#if 1
+#ifdef USE_PP_CARP
         PUSHMARK(SP);
         mXPUSHs(msg);
         PUTBACK;
@@ -321,7 +322,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     if (flags == (WNORMAL | WFATAL | WMESSAGE) && !(results_0 | results_1))
         return 0;
     if (results_0) {
-#if 1
+#ifdef USE_PP_CARP
         PUSHMARK(SP);
         XPUSHs(message);
         PUTBACK;
@@ -408,6 +409,7 @@ PPCODE:
                 SV *msg = newSVpvs("Unknown warnings category '");
                 sv_catsv(msg, word);
                 sv_catpvs(msg, "'");
+                /* But here the fallback to pp warnings::Croaker does not work */
 #if 0
                 PUSHMARK(SP);
                 mXPUSHs(msg);
@@ -441,17 +443,25 @@ import (klass, ...)
     SV* klass
 PREINIT:
     SV *mask;
-    const struct Perl_warnings *w_all = Perl_warnings_lookup("all", 3);
+    struct Perl_warnings *w_all = NULL;
 PPCODE:
     if (!SvPOK(klass))
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
-    if (specialWARN(PL_curcop->cop_warnings))
-        mask = (PL_dowarn & G_WARN_ON) ? newWSVpv(w_all->bits) : newWSVpvh(WARN_DEFAULTstring);
-    else
+    if (specialWARN(PL_curcop->cop_warnings)) {
+        if (PL_dowarn & G_WARN_ON || PL_curcop->cop_warnings == pWARN_ALL) {
+            w_all = Perl_warnings_lookup("all", 3);
+            mask = newWSVpv(w_all->bits);
+        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
+            mask = newWSVpvh(WARN_NONEstring);
+        } else {
+            mask = newWSVpvh(WARN_DEFAULTstring);
+        }
+    } else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
 
     if (IsSet(SvPVX(mask), 0)) {
+        if (!w_all) w_all = Perl_warnings_lookup("all", 3);
         do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->bits));
         if (IsSet(SvPVX(mask), 1))
             do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->deadbits));
@@ -478,6 +488,7 @@ PPCODE:
         } else
             XSRETURN_UNDEF;
     } else {
+        if (!w_all) w_all = Perl_warnings_lookup("all", 3);
         do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->bits));
         _set_warn_bits("import", "", mask);
         mXPUSHs(mask);
@@ -490,16 +501,25 @@ unimport (klass, ...)
 PREINIT:
     SV *mask;
     int i;
-    const struct Perl_warnings *w_all = Perl_warnings_lookup("all", 3);
+    struct Perl_warnings *w_all = NULL;
 PPCODE:
     if (!SvPOK(klass))
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
-    if (specialWARN(PL_curcop->cop_warnings))
-        mask = (PL_dowarn & G_WARN_ON) ? newWSVpv(w_all->bits) : newWSVpvh(WARN_DEFAULTstring);
-    else
+    if (specialWARN(PL_curcop->cop_warnings)) {
+        if (PL_dowarn & G_WARN_ON || PL_curcop->cop_warnings == pWARN_ALL) {
+            w_all = Perl_warnings_lookup("all", 3);
+            mask = newWSVpv(w_all->bits);
+        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
+            mask = newWSVpvh(WARN_NONEstring);
+        } else {
+            mask = newWSVpvh(WARN_DEFAULTstring);
+        }
+    } else
         mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
+
     if (IsSet(SvPVX(mask), 0)) {
+        if (!w_all) w_all = Perl_warnings_lookup("all", 3);
         do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->bits));
         if (IsSet(SvPVX(mask), 1))
             do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->deadbits));
@@ -531,7 +551,7 @@ PPCODE:
                 SV *msg = newSVpvs("Unknown warnings category '");
                 sv_catsv(msg, word);
                 sv_catpvs(msg, "'");
-#if 1
+#ifdef USE_PP_CARP
                 PUSHMARK(SP);
                 mXPUSHs(msg);
                 PUTBACK;
