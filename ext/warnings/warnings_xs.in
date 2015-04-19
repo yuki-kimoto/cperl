@@ -341,7 +341,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     return 1;
 }
 
-/* sv_magic_set ${^WARNINGS_BITS} = */
+/* sv_magic_set ${^WARNINGS_BITS} = mask */
 static void
 _set_warn_bits(const char *func, const char* arg, SV *mask) {
     if (DEBUG_v_TEST_) {
@@ -351,6 +351,13 @@ _set_warn_bits(const char *func, const char* arg, SV *mask) {
         SvREFCNT_dec(dsv);
     }
     if (PL_dowarn & G_WARN_ALL_MASK) return;
+#if 1
+    /* we always call it with a string */
+    if (!SvPOK(mask)) {
+        PL_compiling.cop_warnings = pWARN_STD;
+        return;
+    }
+#endif
     if (memEQs(SvPVX(mask), WARN_MAX_BYTES, WARN_ALLstring)) {
         if (!specialWARN(PL_compiling.cop_warnings))
             PerlMemShared_free(PL_compiling.cop_warnings);
@@ -414,7 +421,7 @@ PPCODE:
                 sv_catsv(msg, word);
                 sv_catpvs(msg, "'");
                 /* But here the fallback to pp warnings::Croaker does not work */
-#ifdef USE_PP_CARP
+#if 0
                 PUSHMARK(SP);
                 mXPUSHs(msg);
                 PUTBACK;
@@ -454,11 +461,9 @@ PPCODE:
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
     if (specialWARN(PL_curcop->cop_warnings)) {
-        if (PL_dowarn & G_WARN_ON || PL_curcop->cop_warnings == pWARN_ALL) {
+        if (PL_dowarn & G_WARN_ON) {
             w_all = Perl_warnings_lookup("all", 3);
             mask = newWSVpv(w_all->bits);
-        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
-            mask = newWSVpvh(WARN_NONEstring);
         } else {
             mask = newWSVpvh(WARN_DEFAULTstring);
         }
@@ -512,11 +517,9 @@ PPCODE:
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
     if (specialWARN(PL_curcop->cop_warnings)) {
-        if (PL_dowarn & G_WARN_ON || PL_curcop->cop_warnings == pWARN_ALL) {
+        if (PL_dowarn & G_WARN_ON) {
             w_all = Perl_warnings_lookup("all", 3);
             mask = newWSVpv(w_all->bits);
-        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
-            mask = newWSVpvh(WARN_NONEstring);
         } else {
             mask = newWSVpvh(WARN_DEFAULTstring);
         }
@@ -530,7 +533,7 @@ PPCODE:
             do_vop(OP_BIT_OR, mask, mask, newWSVpv(w_all->deadbits));
     }
     /* push @_, 'all' if !@_ || @_==1 && $_[0] eq 'FATAL'; */
-    if ((items == 1) || (items == 2 && (SvPOK(ST(0)) && memEQs(SvPVX(ST(0)), SvCUR(ST(0)), "FATAL")))) {
+    if ((items == 1) || (items == 2 && (SvPOK(ST(1)) && memEQs(SvPVX(ST(1)), SvCUR(ST(1)), "FATAL")))) {
         mPUSHs(newSVpvs("all"));
         ax--;
         items++;
@@ -538,7 +541,8 @@ PPCODE:
     for (i=1; i<items; i++) {
         SV *word = ST(i);
         if (!SvPOK(word)) continue;
-        if (memEQs(SvPVX(word), SvCUR(word), "FATAL")) continue;
+        if (memEQs(SvPVX(word), SvCUR(word), "FATAL"))
+            continue;
         else {
             const struct Perl_warnings *w = Perl_warnings_lookup(SvPVX(word), SvCUR(word));
             if (w) { /* $mask &= ~($catmask | $DeadBits{$word} | $All); */
