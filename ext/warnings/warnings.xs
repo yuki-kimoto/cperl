@@ -775,7 +775,7 @@ PPCODE:
                 sv_catsv(msg, word);
                 sv_catpvs(msg, "'");
                 /* But here the fallback to pp warnings::Croaker does not work */
-#if 0
+#ifdef USE_PP_CARP
                 PUSHMARK(SP);
                 mXPUSHs(msg);
                 PUTBACK;
