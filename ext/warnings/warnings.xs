@@ -114,7 +114,6 @@ struct Perl_warnings;
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
 
-
 static unsigned int
 warnings_hash (register const char *str, register unsigned int len)
 {
@@ -574,6 +573,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         mXPUSHs(msg);
         PUTBACK;
         call_pv("warnings::Croaker", G_DISCARD);
+        SPAGAIN;
         /*croak_sv(carp_shortmess(ax, msg));*/
 #else
         croak("Usage: warnings::%s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
@@ -599,6 +599,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
             mXPUSHs(newSVpvs("not an object"));
             PUTBACK;
             call_pv("warnings::Croaker", G_DISCARD);
+            SPAGAIN;
 #else
             croak_sv(carp_shortmess(ax, newSVpvs("not an object")));
 #endif
@@ -619,6 +620,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         mXPUSHs(msg);
         PUTBACK;
         call_pv("warnings::Croaker", G_DISCARD);
+        SPAGAIN;
 #else
         croak_sv(carp_shortmess(ax, msg));
 #endif
@@ -689,6 +691,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         XPUSHs(message);
         PUTBACK;
         call_pv("warnings::Croaker", G_DISCARD);
+        SPAGAIN;
 #else
         croak_sv(carp_longmess(ax, message));
 #endif
@@ -777,6 +780,7 @@ PPCODE:
                 mXPUSHs(msg);
                 PUTBACK;
                 call_pv("warnings::Croaker", G_DISCARD);
+                SPAGAIN;
 #else
                 croak_sv(carp_shortmess(ax, msg));
 #endif
@@ -918,6 +922,7 @@ PPCODE:
                 mXPUSHs(msg);
                 PUTBACK;
                 call_pv("warnings::Croaker", G_DISCARD);
+                SPAGAIN;
 #else
                 croak_sv(carp_shortmess(ax, msg));
 #endif
