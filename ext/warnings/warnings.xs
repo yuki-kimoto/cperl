@@ -1004,6 +1004,8 @@ PPCODE:
                              SvIVX(bytes), last_bit);
                     SvREFCNT_dec(dsv);
                 }
+                /* we need to update ${^WARNING_BITS}/cop_warnings also? */
+                /* _set_warn_bits("register_categories", n, newWSV(wd->bits, SvIVX(bytes))); */
             }
         }
     }
