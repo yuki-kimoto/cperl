@@ -114,7 +114,6 @@ struct Perl_warnings;
 #define MAX_HASH_VALUE 114
 /* maximum key range = 111, duplicates = 0 */
 
-
 static unsigned int
 warnings_hash (register const char *str, register unsigned int len)
 {
@@ -824,9 +823,11 @@ PPCODE:
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
     if (specialWARN(PL_curcop->cop_warnings)) {
-        if (PL_dowarn & G_WARN_ON) {
+        if (PL_dowarn & G_WARN_ON || PL_compiling.cop_warnings == pWARN_ALL) {
             w_all = Perl_warnings_lookup("all", 3);
             mask = newWSVpv(w_all->bits);
+        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
+            mask = newWSVpvh(WARN_NONEstring);
         } else {
             mask = newWSVpvh(WARN_DEFAULTstring);
         }
@@ -880,9 +881,11 @@ PPCODE:
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
     if (specialWARN(PL_curcop->cop_warnings)) {
-        if (PL_dowarn & G_WARN_ON) {
+        if (PL_dowarn & G_WARN_ON || PL_compiling.cop_warnings == pWARN_ALL) {
             w_all = Perl_warnings_lookup("all", 3);
             mask = newWSVpv(w_all->bits);
+        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
+            mask = newWSVpvh(WARN_NONEstring);
         } else {
             mask = newWSVpvh(WARN_DEFAULTstring);
         }
