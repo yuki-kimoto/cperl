@@ -143,8 +143,17 @@ for my $module (sort keys %modules) {
 }
 
 # checking internal consistency
-is( scalar @DynaLoader::dl_librefs, scalar keys %modules, "checking number of items in \@dl_librefs" );
-is( scalar @DynaLoader::dl_modules, scalar keys %modules, "checking number of items in \@dl_modules" );
+# warnings is now also a xs.
+my $numm = scalar(@DynaLoader::dl_modules);
+my $numl = scalar(@DynaLoader::dl_librefs);
+if (grep /^warnings$/, @DynaLoader::dl_modules) {
+  $numm--;
+  $numl--;
+}
+is( $numm, scalar keys %modules, "checking number of items in \@dl_modules" )
+  or warn(join(",",@DynaLoader::dl_modules));
+is( $numl, scalar keys %modules, "checking number of items in \@dl_librefs" )
+  or warn(join(",",@DynaLoader::dl_librefs));
 
 my @loaded_modules = @DynaLoader::dl_modules;
 for my $libref (reverse @DynaLoader::dl_librefs) {
