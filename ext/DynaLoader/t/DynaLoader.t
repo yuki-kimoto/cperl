@@ -164,6 +164,7 @@ for my $libref (reverse @DynaLoader::dl_librefs) {
             skip( "unloading unsupported on $^O", 2 )
                 if ($old_darwin || $^O eq 'VMS');
             my $module = pop @loaded_modules;
+            next if $module eq 'warnings';
             skip( "File::Glob sets PL_opfreehook", 2 ) if $module eq 'File::Glob';
             my $r = eval { DynaLoader::dl_unload_file($libref) };
             is( $@, '', "calling dl_unload_file() for $module" );
