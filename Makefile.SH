@@ -1221,7 +1221,7 @@ $(DYNALOADER) $(DL_SRC): $(MINIPERL_EXE) lib/buildcustomize.pl preplibrary FORCE
 
 $(boot_ext): $(DYNALOADER)
 
-lib/warnings/register.pm : FORCE ext/warnings/register.pm
+lib/warnings/register.pm : ext/warnings/register.pm
 	mkdir -p lib/warnings/
 	$(CPS) ext/warnings/register.pm lib/warnings/
 
@@ -1229,7 +1229,7 @@ lib/warnings.pm : FORCE ext/warnings/warnings.pm
 	$(RMS) $@
 	$(CPS) ext/warnings/warnings.pm $@
 
-warnings_boot :
+warnings_boot : FORCE lib/warnings/register.pm
 	$(RMS) lib/warnings.pm
 	$(CPS) ext/warnings/warnings.boot lib/warnings.pm
 
@@ -1249,6 +1249,7 @@ ext/warnings/warnings.i : ext/warnings/warnings.c $(h)
 ext/warnings/warnings$(OBJ_EXT) : ext/warnings/warnings.c $(h)
 	`$(CCCMD)` $(LDDLFLAGS) $(CCCDLFLAGS) -I. ext/warnings/warnings.c -o $@
 lib/auto/warnings/warnings$(DLSUFFIX) : ext/warnings/warnings$(OBJ_EXT) $(LIBPERL)
+	mkdir -p lib/auto/warnings
 	$(LD) -o $@ $(LDDLFLAGS) ext/warnings/warnings$(OBJ_EXT)
 	$(MAKE) warnings_post
 
