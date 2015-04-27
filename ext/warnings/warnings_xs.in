@@ -279,7 +279,12 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
             Perl_deb("warnings::%s is_obj => cx_depth=%d\n", sub, i);
         SvREFCNT_dec(eval);
     } else {
+#if 0
+        /* TODO Still buggy, off-by-one */
         i = short_error_loc();
+#else
+        i = long_error_loc();
+#endif
     }
 
     if (i == 0) /* A XS speciality */
