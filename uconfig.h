@@ -3438,6 +3438,13 @@
 /*#define HAS_BUILTIN_EXPECT	/ **/
 /*#define HAS_BUILTIN_CHOOSE_EXPR	/ **/
 
+/* HAS_BUILTIN_ARITH_OVERFLOW:
+ *	This symbol is defined if the compiler supports the intrinsics
+ *	__builtin_saddl_overflow() for signed and unsigned IV sizes.
+ *      GCC since 5.0, clang since 3.6
+ */
+/*#define HAS_BUILTIN_ARITH_OVERFLOW	/ **/
+
 /* HAS_C99_VARIADIC_MACROS:
  *	If defined, the compiler supports C99 variadic macros.
  */
@@ -4523,6 +4530,11 @@
  */
 /*#define HAS_USTAT		/ **/
 
+/* HAS_VMS_CASE_SENSITIVE_SYMBOLS:
+ *	This symbol, if defined, indicates case sensitive symbols on VMS.
+ */
+/*#define HAS_VMS_CASE_SENSITIVE_SYMBOLS	/ **/
+
 /* HAS_WCSCMP:
  *	This symbol, if defined, indicates that the wcscmp routine is
  *	available to compare two wide character strings.
@@ -5216,6 +5228,6 @@
 #endif
 
 /* Generated from:
- * 8863582d1c1d676c9f285e98d7c87846ef65a244eeb536af569cd4a8f45515ab config_h.SH
- * 3aef1b9d110da2bbe0365d9fd46aafd1df315fc76a2b330d2295ded09b7b5fb5 uconfig.sh
+ * ea39bd0b7603a9b92f7fe460c8458cde1b8014049ef54aa8c983510baed96913 config_h.SH
+ * 6bcee9a8220c9290a11ef97f977a9a2b99b1b1f9560c6e463398330d1095f663 uconfig.sh
  * ex: set ro: */
