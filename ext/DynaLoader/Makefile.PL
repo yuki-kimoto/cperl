@@ -12,7 +12,6 @@ WriteMakefile(
     SKIP	 => [qw(dynamic dynamic_lib dynamic_bs)],
     XSPROTOARG   => '-noprototypes', 		# XXX remove later?
     VERSION_FROM => 'dlboot_c.PL',
-    PM		 => {'DynaLoader.pm' => '$(INST_LIBDIR)/DynaLoader.pm'},
     depend       => {	'DynaLoader$(OBJ_EXT)' => 'dlutils.c dlboot_c',
 			'DynaLoader.c' => 'DynaLoader.xs'},
     clean	 => {FILES => 'dlboot.c DynaLoader.c DynaLoader.xs'},
