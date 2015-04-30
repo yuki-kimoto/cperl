@@ -3643,7 +3643,7 @@ PP(pp_signature)
     SV **padp;        /* pad slot for current var */
     UNOP_AUX_item *items = cUNOP_AUXx(PL_op)->op_aux;
 
-    /* process arg count limits */
+    /* check arity (process arg count limits) */
     {
         UV   mand_params; /* number of mandatory parameters */
         UV   opt_params;  /* number of optional parameters */
@@ -3728,6 +3728,8 @@ PP(pp_signature)
             SV *argsv;
             SV *varsv = (actions & SIGNATURE_FLAG_skip) ?  NULL : *padp++;
 
+            if (actions & SIGNATURE_FLAG_ref && action != SIGNATURE_arg)
+                S_croak_caller("Reference parameter cannot take default value");
             if (argc) {
                 argc--;
                 if (!varsv) {
@@ -3831,12 +3833,12 @@ PP(pp_signature)
 
         } /* case arg_default_...  */
 
-        case SIGNATURE_slurp_array:
+        case SIGNATURE_array:
         {
             SV *varsv;
             SSize_t i;
 
-            if (!argc || (actions & SIGNATURE_FLAG_skip))
+            if (!argc || (actions & (SIGNATURE_FLAG_skip|SIGNATURE_FLAG_ref)))
                 goto finish;
 
             /* This is a copy of the relevant parts of pp_aassign().
@@ -3885,8 +3887,8 @@ PP(pp_signature)
                         actions = (++items)->uv;
                         continue;
                     case SIGNATURE_arg:
-                    case SIGNATURE_slurp_array:
-                    case SIGNATURE_slurp_hash:
+                    case SIGNATURE_array:
+                    case SIGNATURE_hash:
                         assert(PL_op->op_private & OPpSIGNATURE_FAKE);
                         break;
                     case SIGNATURE_end:
@@ -3925,13 +3927,12 @@ PP(pp_signature)
                 return o->op_next;
             }
 
-        case SIGNATURE_slurp_hash:
+        case SIGNATURE_hash:
         {
             SV *varsv;
 
-            if (!argc)
+            if (!argc || (actions & SIGNATURE_FLAG_ref))
                 goto finish;
-
             if (UNLIKELY(argc % 2)) {
                 if (!(PL_op->op_private & OPpSIGNATURE_FAKE))
                     S_croak_caller("Odd name/value argument for subroutine");
