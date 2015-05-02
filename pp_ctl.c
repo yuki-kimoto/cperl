@@ -3740,7 +3740,7 @@ PP(pp_require)
 	    if ( vcmp(sv,PL_patchlevel) <= 0 )
 		DIE(aTHX_ "Perls since %"SVf" too modern--this is %"SVf", stopped",
 		    SVfARG(sv_2mortal(vnormal(sv))),
-		    SVfARG(sv_2mortal(vnormal(PL_patchlevel)))
+		    SVfARG(PL_patchlevel)
 		);
 	}
 	else {
@@ -3762,7 +3762,7 @@ PP(pp_require)
 		    DIE(aTHX_ "Perl %"SVf" required--this is only "
 		    	"%"SVf", stopped",
 			SVfARG(sv_2mortal(vnormal(req))),
-			SVfARG(sv_2mortal(vnormal(PL_patchlevel)))
+			SVfARG(PL_patchlevel)
 		    );
 		}
 		else { /* probably 'use 5.10' or 'use 5.8' */
@@ -3781,7 +3781,7 @@ PP(pp_require)
 		    	"--this is only %"SVf", stopped",
 			SVfARG(sv_2mortal(vnormal(req))),
 			SVfARG(sv_2mortal(vnormal(sv_2mortal(hintsv)))),
-			SVfARG(sv_2mortal(vnormal(PL_patchlevel)))
+			SVfARG(PL_patchlevel)
 		    );
 		}
 	    }
