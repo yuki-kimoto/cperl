@@ -108,6 +108,7 @@ sub scan_ext
     while (defined (my $item = readdir $dh)) {
         next if $item =~ /^\.\.?$/;
         next if $item eq "DynaLoader";
+        next if $item eq "warnings";
         next unless -d "$ext_dir/$item";
         my $this_ext = $item;
         my $leaf = $item;
