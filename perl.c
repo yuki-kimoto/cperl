@@ -1701,6 +1701,9 @@ S_Internals_V(pTHX_ CV *cv)
 #  ifdef PERL_EXTERNAL_GLOB
 			     " PERL_EXTERNAL_GLOB"
 #  endif
+#  ifdef PERL_HASH_FUNC_CRC32
+			     " PERL_HASH_FUNC_CRC32"
+#  endif
 #  ifdef PERL_HASH_FUNC_SIPHASH
 			     " PERL_HASH_FUNC_SIPHASH"
 #  endif
@@ -1769,7 +1772,7 @@ S_Internals_V(pTHX_ CV *cv)
 #  endif
 #  ifdef USE_FAST_STDIO
 			     " USE_FAST_STDIO"
-#  endif	       
+#  endif
 #  ifdef USE_HASH_SEED_EXPLICIT
 			     " USE_HASH_SEED_EXPLICIT"
 #  endif
@@ -1781,10 +1784,13 @@ S_Internals_V(pTHX_ CV *cv)
 #  endif
 #  ifdef USE_PERL_ATOF
 			     " USE_PERL_ATOF"
-#  endif	       
+#  endif
 #  ifdef USE_SITECUSTOMIZE
 			     " USE_SITECUSTOMIZE"
-#  endif	       
+#  endif
+#  ifdef USE_CPERL
+			     " USE_CPERL"
+#  endif
 	;
     PERL_UNUSED_ARG(cv);
     PERL_UNUSED_VAR(items);
