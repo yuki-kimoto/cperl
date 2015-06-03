@@ -636,8 +636,10 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         sv_catpvs(eval, "=/;} $i");
         if (eval_sv(eval, G_SCALAR)) { SPAGAIN; i = TOPi - 2; }
         else i = 0;
+#ifdef DEBUGGING
         if (DEBUG_v_TEST_)
             Perl_deb("warnings::%s is_obj => cx_depth=%d\n", sub, i);
+#endif
         SvREFCNT_dec(eval);
     } else {
 #if 0
@@ -668,12 +670,14 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         assert(!specialWARN(old_warnings));
         mask = newSVpvn((char *) (old_warnings + 1), old_warnings[0]);
     }
+#ifdef DEBUGGING
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
         Perl_deb("warnings::%s %s %d %s\n", sub, category, i,
                  pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         SvREFCNT_dec(dsv);
     }
+#endif
     if (flags & WFATAL) {
         const char* m = SvPVX(mask);
         results_0 = IsSet(m, w->offset + WFATAL - 1);
@@ -711,12 +715,14 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
 /* sv_magic_set ${^WARNINGS_BITS} = mask */
 static void
 _set_warn_bits(const char *func, const char* arg, SV *mask) {
+#ifdef DEBUGGING
     if (DEBUG_v_TEST_) {
         SV *dsv = newSVpvn("", 80);
         Perl_deb("warnings::%s %s %s\n", func, arg,
                  pv_display( dsv, SvPVX(mask), SvCUR(mask), SvCUR(mask), 80));
         SvREFCNT_dec(dsv);
     }
+#endif
     if (PL_dowarn & G_WARN_ALL_MASK) return;
 #if 1
     /* we always call it with a string */
@@ -827,17 +833,17 @@ PPCODE:
     if (!SvPOK(klass))
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
-    if (specialWARN(PL_curcop->cop_warnings)) {
+    if (specialWARN(PL_compiling.cop_warnings)) {
         if (PL_dowarn & G_WARN_ON || PL_compiling.cop_warnings == pWARN_ALL) {
             w_all = Perl_warnings_lookup("all", 3);
             mask = newWSVpv(w_all->bits);
-        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
+        } else if (PL_compiling.cop_warnings == pWARN_NONE) {
             mask = newWSVpvh(WARN_NONEstring);
         } else {
             mask = newWSVpvh(WARN_DEFAULTstring);
         }
     } else
-        mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
+        mask = newSVpvn((char*)((STRLEN*)PL_compiling.cop_warnings+1), *PL_compiling.cop_warnings);
 
     if (IsSet(SvPVX(mask), 0)) {
         if (!w_all) w_all = Perl_warnings_lookup("all", 3);
@@ -885,17 +891,17 @@ PPCODE:
     if (!SvPOK(klass))
         croak_xs_usage(cv,  "class, ...");
     /* mask = ${^WARNING_BITS} // ($^W ? $Bits{all} : $DEFAULT); */
-    if (specialWARN(PL_curcop->cop_warnings)) {
+    if (specialWARN(PL_compiling.cop_warnings)) {
         if (PL_dowarn & G_WARN_ON || PL_compiling.cop_warnings == pWARN_ALL) {
             w_all = Perl_warnings_lookup("all", 3);
             mask = newWSVpv(w_all->bits);
-        } else if (PL_curcop->cop_warnings == pWARN_NONE) {
+        } else if (PL_compiling.cop_warnings == pWARN_NONE) {
             mask = newWSVpvh(WARN_NONEstring);
         } else {
             mask = newWSVpvh(WARN_DEFAULTstring);
         }
     } else
-        mask = newSVpvn((char*)((STRLEN*)PL_curcop->cop_warnings+1), *PL_curcop->cop_warnings);
+        mask = newSVpvn((char*)((STRLEN*)PL_compiling.cop_warnings+1), *PL_compiling.cop_warnings);
 
     if (IsSet(SvPVX(mask), 0)) {
         if (!w_all) w_all = Perl_warnings_lookup("all", 3);
@@ -1005,6 +1011,7 @@ PPCODE:
                         croak("Internal error: Cannot register more than 255 warnings");
                 }
                 SvIV_set(last_bitsv, last_bit);
+#ifdef DEBUGGING
                 if (DEBUG_v_TEST_) {
                     SV *dsv = newSVpvn("", 80);
                     Perl_deb("warnings::register_categories %s %s\n", n,
@@ -1014,6 +1021,7 @@ PPCODE:
                              SvIVX(bytes), last_bit);
                     SvREFCNT_dec(dsv);
                 }
+#endif
                 /* we need to update ${^WARNING_BITS}/cop_warnings also? */
                 /* _set_warn_bits("register_categories", n, newWSV(wd->bits, SvIVX(bytes))); */
             }
