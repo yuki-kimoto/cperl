@@ -30,9 +30,9 @@ sub enabled { _chk("enabled", NORMAL, @_ ? @_ : (caller(0))[0]); }
 
 sub fatal_enabled {_chk("fatal_enabled", FATAL, @_ ? @_ : (caller(0))[0]); }
 
-sub warn { _chk("warn", FATAL | MESSAGE, @_ > 1 ? @_ : ((caller(0))[0], @_)); }
+sub warn { _chk("warn", FATAL | MESSAGE, @_ == 1 ? ((caller(0))[0], @_) : @_); }
 
-sub warnif { _chk("warnif", NORMAL | FATAL | MESSAGE, @_ > 1 ? @_ : ((caller(0))[0], @_)); }
+sub warnif { _chk("warnif", NORMAL | FATAL | MESSAGE, @_ == 1 ? ((caller(0))[0], @_) : @_); }
 
 1;
 __END__
