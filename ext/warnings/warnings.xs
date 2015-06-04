@@ -91,7 +91,7 @@ Generated lookup function to access to read-only compile-time part of the hash.
 
 #include "warnings.h"
 
-#define USE_PP_CARP
+#undef USE_PP_CARP
 #define WNORMAL  1
 #define WFATAL   2
 #define WMESSAGE 4
@@ -566,7 +566,7 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
     STRLEN * old_warnings;
 
     if (!(items == 1 || items == (has_message ? 2 : 0))) {
-#ifdef USE_PP_CARP
+#if 1 || defined(USE_PP_CARP)
         SV *msg = newSVpvs("");
         sv_catpvf(msg, "Usage: warnings::%s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
         PUSHMARK(SP);
@@ -574,8 +574,8 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
         PUTBACK;
         call_pv("warnings::Croaker", G_DISCARD);
         SPAGAIN;
-        /*croak_sv(carp_shortmess(ax, msg));*/
 #else
+        /*croak_sv(carp_shortmess(ax, msg));*/
         croak("Usage: warnings::%s(%s)", sub, has_message ? "[category,] 'message'" : "[category]");
 #endif
     }

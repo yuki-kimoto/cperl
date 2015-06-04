@@ -232,7 +232,7 @@ boot_Carp(pTHX_ SV *xsfile)
     /* Avoid used only once warnings */
     GvMULTI_on(GvInternal); GvMULTI_on(GvCarpInternal);
 
-    set_version(STR_WITH_LEN("Carp::VERSION"), STR_WITH_LEN("2.00c"), 2.00);
+    Perl_set_version(aTHX_ STR_WITH_LEN("Carp::VERSION"), STR_WITH_LEN("2.00c"), 2.00);
 
     newXS("Carp::croak",		XS_Carp_croak,	file);
     newXS("Carp::confess",		XS_Carp_confess,file);
