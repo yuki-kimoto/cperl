@@ -22,19 +22,19 @@ sub Croaker {
     Carp::croak(@_);
 }
 
-sub MESSAGE () { 4 };
-sub FATAL () { 2 };
+sub MESSAGE (){ 4 };
+sub FATAL  () { 2 };
 sub NORMAL () { 1 };
 
 #sub enabled       { _chk("enabled",       NORMAL, @_ ? @_ : (caller(0))[0]); }
 #sub fatal_enabled { _chk("fatal_enabled", FATAL,  @_ ? @_ : (caller(0))[0]); }
-sub warn           { _chk("warn",   FATAL | MESSAGE, @_ == 1 ? ((caller(0))[0], @_) : @_); }
-sub warnif         { _chk("warnif", NORMAL | FATAL | MESSAGE, @_ == 1 ? ((caller(0))[0], @_) : @_); }
+#sub warn           { _chk("warn",   FATAL | MESSAGE, @_ == 1 ? ((caller(0))[0], @_) : @_); }
+#sub warnif         { _chk("warnif", NORMAL | FATAL | MESSAGE, @_ == 1 ? ((caller(0))[0], @_) : @_); }
 
 sub enabled       { _chk("enabled",       NORMAL, @_); }
 sub fatal_enabled { _chk("fatal_enabled", FATAL,  @_); }
-#sub warn          { _chk("warn",          FATAL | MESSAGE, @_); }
-#sub warnif        { _chk("warnif",        NORMAL | FATAL | MESSAGE, @_); }
+sub warn          { _chk("warn",          FATAL | MESSAGE, @_); }
+sub warnif        { _chk("warnif",        NORMAL | FATAL | MESSAGE, @_); }
 
 1;
 __END__

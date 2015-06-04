@@ -245,7 +245,9 @@ static int _chk(const char *sub, U32 flags, I32 ax) {
 #endif
         }
     } else {
-        category = HvNAME(CopSTASH(PL_curcop));
+        /* when called from pp warnings::* then caller 0, else just curcop */
+        const PERL_CONTEXT *cx = caller_cx(0, NULL);
+        category = HvNAME(CopSTASH(cx ? cx->blk_oldcop : PL_curcop));
     }
 
     w = Perl_warnings_lookup(category, strlen(category));
@@ -599,6 +601,42 @@ PPCODE:
         XSRETURN_YES;
     else
         XSRETURN_NO;
+
+#if 0
+
+void
+enabled (...)
+PPCODE:
+    if (_chk("enabled", WNORMAL, ax))
+        XSRETURN_YES;
+    else
+        XSRETURN_NO;
+
+void
+fatal_enabled (...)
+PPCODE:
+    if (_chk("fatal_enabled", WFATAL, ax))
+        XSRETURN_YES;
+    else
+        XSRETURN_NO;
+
+void
+warn (...)
+PPCODE:
+    if (_chk("warn", WFATAL|WMESSAGE, ax))
+        XSRETURN_YES;
+    else
+        XSRETURN_NO;
+
+void
+warnif (...)
+PPCODE:
+    if (_chk("warnif", WNORMAL|WFATAL|WMESSAGE, ax))
+        XSRETURN_YES;
+    else
+        XSRETURN_NO;
+
+#endif
 
 void
 register_categories (...)
