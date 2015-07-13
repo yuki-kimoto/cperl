@@ -2536,7 +2536,7 @@ S_check_hash_fields_and_hekify(pTHX_ UNOP *rop, SVOP *key_op)
          && isGV(*fields) && GvHV(*fields);
 
     for (; key_op; key_op = (SVOP*)OpSIBLING(key_op)) {
-        SV **svp, *sv;
+        PV **svp, *sv;
         if (key_op->op_type != OP_CONST)
             continue;
         svp = cSVOPx_svp(key_op);
@@ -5447,7 +5447,7 @@ Supported optypes: C<OP_METHOD>.
 */
 
 static OP*
-S_newMETHOP_internal(pTHX_ I32 type, I32 flags, OP* dynamic_meth, SV* const_meth) {
+S_newMETHOP_internal(pTHX_ I32 type, I32 flags, OP* dynamic_meth, PV* const_meth) {
     dVAR;
     METHOP *methop;
 
@@ -5489,7 +5489,7 @@ Perl_newMETHOP (pTHX_ I32 type, I32 flags, OP* dynamic_meth) {
 }
 
 /*
-=for apidoc Am|OP *|newMETHOP_named|I32 type|I32 flags|SV *const_meth
+=for apidoc Am|OP *|newMETHOP_named|I32 type|I32 flags|PV *const_meth
 
 Constructs, checks, and returns an op of method type with a constant
 method name.  C<type> is the opcode.  C<flags> gives the eight bits of
@@ -5502,7 +5502,7 @@ Supported optypes: C<OP_METHOD_NAMED>.
 */
 
 OP *
-Perl_newMETHOP_named (pTHX_ I32 type, I32 flags, SV* const_meth) {
+Perl_newMETHOP_named (pTHX_ I32 type, I32 flags, PV* const_meth) {
     PERL_ARGS_ASSERT_NEWMETHOP_NAMED;
     return newMETHOP_internal(type, flags, NULL, const_meth);
 }
@@ -6713,7 +6713,7 @@ The reference count for each specified C<SV*> parameter is decremented.
 =cut */
 
 void
-Perl_load_module(pTHX_ U32 flags, SV *name, SV *ver, ...)
+Perl_load_module(pTHX_ U32 flags, PV *name, SV *ver, ...)
 {
     va_list args;
 
@@ -6738,7 +6738,7 @@ Perl_load_module_nocontext(U32 flags, SV *name, SV *ver, ...)
 #endif
 
 void
-Perl_vload_module(pTHX_ U32 flags, SV *name, SV *ver, va_list *args)
+Perl_vload_module(pTHX_ U32 flags, PV *name, SV *ver, va_list *args)
 {
     OP *veop, *imop;
     OP * const modname = newSVOP(OP_CONST, 0, name);
@@ -16499,7 +16499,7 @@ by C<keyword()>.  It must not be equal to 0.
 =cut
 */
 
-SV *
+PV *
 Perl_core_prototype(pTHX_ SV *sv, const char *name, const int code,
                           int * const opnum)
 {
@@ -16597,7 +16597,7 @@ Perl_core_prototype(pTHX_ SV *sv, const char *name, const int code,
     str[n++] = '\0';
     sv_setpvn(sv, str, n - 1);
     if (opnum) *opnum = i;
-    return sv;
+    return MUTABLE_PV(sv);
 }
 
 OP *
@@ -16669,7 +16669,7 @@ Perl_coresub_op(pTHX_ SV * const coreargssv, const int code,
 }
 
 void
-Perl_report_redefined_cv(pTHX_ const SV *name, const CV *old_cv,
+Perl_report_redefined_cv(pTHX_ const PV *name, const CV *old_cv,
 			       SV * const *new_const_svp)
 {
     const char *hvname;
