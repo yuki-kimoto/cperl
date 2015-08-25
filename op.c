@@ -16128,7 +16128,8 @@ Perl_rpeep(pTHX_ OP *o)
 			assert( OP_HAS_TARGLEX(o->op_type) );
 			o->op_targ = o->op_next->op_targ;
 			o->op_next->op_targ = 0;
-                        DEBUG_kv(Perl_deb(aTHX_ "rpeep: set TARGET_MY on %s\n", OP_NAME(o)));
+                        DEBUG_kv(Perl_deb(aTHX_ "rpeep: set TARGET_MY on %s\n",
+                                          OP_NAME(o)));
 			o->op_private |= OPpTARGET_MY;
 		    }
 		}
@@ -16167,6 +16168,7 @@ Perl_rpeep(pTHX_ OP *o)
         case OP_PUSHMARK:
             seen_pushmark = TRUE;
 
+            /*DEBUG_kv(deb("rpeep seen pushmark %s\n", OP_NAME(o->op_next)));*/
             /* Given
                  5 repeat/DOLIST
                  3   ex-list
