@@ -250,6 +250,7 @@ static const char* const lex_state_names[] = {
 #endif
 
 #define TOKEN(retval) return ( PL_bufptr = s, REPORT(retval))
+#define ITOKEN(f,retval) return ( pl_yylval.ival=f, PL_bufptr = s, REPORT(retval))
 #define OPERATOR(retval) return (PL_expect = XTERM, PL_bufptr = s, REPORT(retval))
 #define AOPERATOR(retval) return ao((PL_expect = XTERM, PL_bufptr = s, retval))
 #define PREBLOCK(retval) return (PL_expect = XBLOCK,PL_bufptr = s, REPORT(retval))
@@ -357,6 +358,7 @@ static struct debug_tokens {
     { ASSIGNOP,		TOKENTYPE_OPNUM,	"ASSIGNOP" },
     { BITANDOP,		TOKENTYPE_OPNUM,	"BITANDOP" },
     { BITOROP,		TOKENTYPE_OPNUM,	"BITOROP" },
+    { CLASS,		TOKENTYPE_NONE,		"CLASS" },
     { COLONATTR,	TOKENTYPE_NONE,		"COLONATTR" },
     { CONTINUE,		TOKENTYPE_NONE,		"CONTINUE" },
     { DEFAULT,		TOKENTYPE_NONE,		"DEFAULT" },
@@ -387,8 +389,10 @@ static struct debug_tokens {
     { LSTOP,		TOKENTYPE_OPNUM,	"LSTOP" },
     { LSTOPSUB,		TOKENTYPE_OPVAL,	"LSTOPSUB" },
     { MATCHOP,		TOKENTYPE_OPNUM,	"MATCHOP" },
+    { METHDECL,		TOKENTYPE_IVAL,		"METHDECL" },
     { METHOD,		TOKENTYPE_OPVAL,	"METHOD" },
     { MULOP,		TOKENTYPE_OPNUM,	"MULOP" },
+    { MULTIDECL,	TOKENTYPE_IVAL,		"MULTIDECL" },
     { MY,		TOKENTYPE_IVAL,		"MY" },
     { NOAMP,		TOKENTYPE_NONE,		"NOAMP" },
     { NOTOP,		TOKENTYPE_NONE,		"NOTOP" },
@@ -411,7 +415,7 @@ static struct debug_tokens {
     { RELOP,		TOKENTYPE_OPNUM,	"RELOP" },
     { REQUIRE,		TOKENTYPE_NONE,		"REQUIRE" },
     { SHIFTOP,		TOKENTYPE_OPNUM,	"SHIFTOP" },
-    { SUB,		TOKENTYPE_NONE,		"SUB" },
+    { SUB,		TOKENTYPE_IVAL,		"SUB" },
     { THING,		TOKENTYPE_OPVAL,	"THING" },
     { UMINUS,		TOKENTYPE_NONE,		"UMINUS" },
     { UNIOP,		TOKENTYPE_OPNUM,	"UNIOP" },
@@ -5626,6 +5630,10 @@ Perl_yylex(pTHX)
 			sv_free(sv);
 			CvPURE_on(PL_compcv);
 		    }
+		    else if (!PL_in_my && len == 5 && strnEQ(pv, "multi", len)) {
+			sv_free(sv);
+			CvMULTI_on(PL_compcv);
+		    }
                     /* handle coretypes here, so we can pass an empty attrs
                        to newATTRSUB */
 		    else if (len == 3
@@ -7039,6 +7047,7 @@ Perl_yylex(pTHX)
 		}
 
 		/* If followed by var or block, call it a method (unless sub) */
+                /* multi's are changed later in op.c */
 
 		if ((*s == '$' || *s == '{') && !cv) {
 		    op_free(rv2cv_op);
@@ -7910,6 +7919,12 @@ Perl_yylex(pTHX)
 	case KEY_pack:
 	    LOP(OP_PACK,XTERM);
 
+	case KEY_class:
+	    s = force_word(s,WORD,FALSE,TRUE);
+	    s = skipspace(s);
+	    /*s = force_strict_version(s);*/
+	    PREBLOCK(CLASS);
+
 	case KEY_package:
 	    s = force_word(s,WORD,FALSE,TRUE);
 	    s = skipspace(s);
@@ -8205,6 +8220,8 @@ Perl_yylex(pTHX)
 
 	case KEY_format:
 	case KEY_sub:
+	case KEY_method:
+	case KEY_multi:
 	  really_sub:
 	    {
 		char * const tmpbuf = PL_tokenbuf + 1;
@@ -8227,7 +8244,7 @@ Perl_yylex(pTHX)
                     if (key == KEY_format)
 			format_name = S_newSV_maybe_utf8(aTHX_ s, d - s);
 		    *PL_tokenbuf = '&';
-		    if (memchr(tmpbuf, ':', len) || key != KEY_sub
+		    if (memchr(tmpbuf, ':', len) || key == KEY_format
 		     || pad_findmy_pvn(
 			    PL_tokenbuf, len + 1, 0
 			) != NOT_IN_PAD)
@@ -8303,15 +8320,15 @@ Perl_yylex(pTHX)
 		else
 		    have_proto = FALSE;
 
+                assert(key != KEY_format);
 		if (*s == ':' && s[1] != ':')
 		    PL_expect = attrful;
-		else if ((*s != '{' && *s != '(') && key != KEY_format) {
-                    assert(key == KEY_sub || key == KEY_AUTOLOAD ||
-                           key == KEY_DESTROY || key == KEY_BEGIN ||
-                           key == KEY_UNITCHECK || key == KEY_CHECK ||
+		else if (*s != '{' && *s != '(') {
+                    assert(key == KEY_sub || key == KEY_multi || key == KEY_method ||
+                           key == KEY_AUTOLOAD || key == KEY_DESTROY ||
+                           key == KEY_BEGIN || key == KEY_UNITCHECK || key == KEY_CHECK ||
                            key == KEY_INIT || key == KEY_END ||
-                           key == KEY_my || key == KEY_state ||
-                           key == KEY_our);
+                           key == KEY_my || key == KEY_state || key == KEY_our);
 		    if (!have_name)
 			Perl_croak(aTHX_ "Illegal declaration of anonymous subroutine");
 		    else if (*s != ';' && *s != '}')
@@ -8332,7 +8349,11 @@ Perl_yylex(pTHX)
 		    TOKEN(ANONSUB);
 		}
 		force_ident_maybe_lex('&');
-		TOKEN(SUB);
+                if (key == KEY_multi)
+                    ITOKEN(CVf_MULTI,MULTIDECL);
+                else if (key == KEY_method)
+                    ITOKEN(CVf_METHOD,METHDECL);
+		ITOKEN(0,SUB);
 	    }
 
 	case KEY_system:
