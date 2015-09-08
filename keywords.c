@@ -3485,5 +3485,5 @@ unknown:
 }
 
 /* Generated from:
- * 56439b53d3546a1ab092e3bd1046c41b163896a92f77b1bcb9aa1c92f316cadf regen/keywords.pl
+ * baca46be29e2d17f503d6d644026e3293fd36de96fae83a02322e2bf6fd2f657 regen/keywords.pl
  * ex: set ro: */

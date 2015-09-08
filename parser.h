@@ -90,13 +90,13 @@ typedef struct yy_parser {
        NOLINE) after using it.  The purpose of this is to report line num-
        bers in multiline constructs using the number of the first line. */
     line_t	copline;
-    U16		in_my;		/* we're compiling a "my"/"our" declaration */
     U8		lex_state;	/* next token is determined */
     U8		error_count;	/* how many compile errors so far, max 10 */
     HV		*in_my_stash;	/* declared class of this "my" declaration */
     PerlIO	*rsfp;		/* current source file pointer */
     AV		*rsfp_filters;	/* holds chain of active source filters */
     U8		form_lex_state;	/* remember lex_state when parsing fmt */
+    U8		in_my;		/* we're compiling a "my"/"our" declaration */
 
     YYSTYPE	nextval[5];	/* value of next token, if any */
     I32		nexttype[5];	/* type of next token */
@@ -112,6 +112,7 @@ typedef struct yy_parser {
     PERL_BITFIELD16	filtered:1;    /* source filters in evalbytes */
     PERL_BITFIELD16	saw_infix_sigil:1; /* saw & or * or % operator */
     PERL_BITFIELD16	parsed_sub:1;  /* last thing parsed was a sub */
+    PERL_BITFIELD16	in_class:1;    /* lexer is in a class block */
 } yy_parser;
 
 /* flags for lexer API */
