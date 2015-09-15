@@ -8,8 +8,8 @@ for b in master `git branch --list --no-color|cut -c3- | egrep 'bugfix/|feature/
         else ../do-conf-cperl >/dev/null 2>/dev/null
         fi
         make -s -j4 2>/dev/null
-        echo test $b ...
-        make -s -j4 test 2>&1 | tee $tfile
+        echo test $b ... | tee $tfile
+        make -s -j4 test 2>&1 | tee -a $tfile
         echo tested $b | tee -a $tfile
     fi
 done
