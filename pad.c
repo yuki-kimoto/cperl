@@ -2344,6 +2344,9 @@ If the I<flags> include CV_NAME_NOTQUAL, then the package name will not be
 included.  If the first argument is neither a CV nor a GV, this flag is
 ignored (subject to change).
 
+If the I<flags> include CV_NAME_NOMAIN, then "main:::" will be omitted
+as package name.
+
 =cut
 */
 
@@ -2359,20 +2362,28 @@ Perl_cv_name(pTHX_ CV *cv, SV *sv, U32 flags)
 	SV * const retsv = sv ? (sv) : sv_newmortal();
     	if (SvTYPE(cv) == SVt_PVCV) {
 	    if (CvNAMED(cv)) {
-		if (CvLEXICAL(cv) || flags & CV_NAME_NOTQUAL)
+		if (CvLEXICAL(cv) || flags & CV_NAME_NOTQUAL) {
 		    sv_sethek(retsv, CvNAME_HEK(cv));
-		else {
-		    sv_sethek(retsv, HvNAME_HEK(CvSTASH(cv)));
-		    sv_catpvs(retsv, "::");
-		    sv_cathek(retsv, CvNAME_HEK(cv));
+		} else {
+                    const HV *pkg = CvSTASH(cv);
+                    if (flags & CV_NAME_NOMAIN
+                        && HvNAMELEN_get(pkg) == 4
+                        && strnEQ(HEK_KEY(HvNAME_HEK_NN(pkg)), "main", 4))
+                    {
+                        sv_sethek(retsv, CvNAME_HEK(cv));
+                    } else {
+                        sv_sethek(retsv, HvNAME_HEK(pkg));
+                        sv_catpvs(retsv, "::");
+                        sv_cathek(retsv, CvNAME_HEK(cv));
+                    }
 		}
 	    }
 	    else if (CvLEXICAL(cv) || flags & CV_NAME_NOTQUAL)
 		sv_sethek(retsv, GvNAME_HEK(GvEGV(CvGV(cv))));
-	    else gv_efullname3(retsv, CvGV(cv), NULL);
+	    else gv_efullname4(retsv, CvGV(cv), NULL, !(flags & CV_NAME_NOMAIN));
 	}
 	else if (flags & CV_NAME_NOTQUAL) sv_sethek(retsv, GvNAME_HEK(cv));
-	else gv_efullname3(retsv,(GV *)cv,NULL);
+	else gv_efullname4(retsv,(GV *)cv, NULL, !(flags & CV_NAME_NOMAIN));
 	return retsv;
     }
 }
