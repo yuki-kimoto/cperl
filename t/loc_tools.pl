@@ -84,6 +84,7 @@ sub _decode_encodings { # For use only by other functions in this file!
 #   6 => 'CTYPE',
 # where 6 is the value of &POSIX::LC_CTYPE
 my %category_name;
+# Note: This will fail with miniperl
 eval { require POSIX; import POSIX 'locale_h'; };
 unless ($@) {
     my $number_for_missing_category = 0;
@@ -122,22 +123,24 @@ sub locales_enabled(;$) {
                         # next line.
                     && $Config{ccflags} !~ /\bD?NO_LOCALE\b/
                     && $has_posix_locales;
+    return 0 unless    exists &DynaLoader::boot_DynaLoader; # do not die with miniperl
 
     # Done with the global possibilities.  Now check if any passed in category
     # is disabled.
     my $categories_ref = shift;
+    #warn "valid: @{[keys %category_name]} => @{[values %category_name]}";
     if (defined $categories_ref) {
         $categories_ref = [ $categories_ref ] if ! ref $categories_ref;
         my @local_categories_copy = @$categories_ref;
         for my $category (@local_categories_copy) {
             if ($category =~ / ^ -? \d+ $ /x) {
-                die "Invalid locale category number '$category'"
+                die "Invalid locale category number '$category', check your locale.h"
                     unless grep { $category == $_ } keys %category_name;
                 $category = $category_name{$category};
             }
             else {
                 $category =~ s/ ^ LC_ //x;
-                die "Invalid locale category name '$category'"
+                die "Invalid locale category name '$category', undefined POSIX::LC_$category()"
                     unless grep { $category eq $_ } values %category_name;
             }
 
