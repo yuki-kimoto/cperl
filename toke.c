@@ -12082,7 +12082,6 @@ Perl_parse_subsignature(pTHX)
     st.items[2].uv = SIGNATURE_end; /* actions */
 
     st.sig_op = newUNOP_AUX(OP_SIGNATURE, 0, NULL, st.items+1);
-
     initops = newSTATEOP(0, NULL, st.sig_op);
 
     lex_read_space(0);
@@ -12395,7 +12394,7 @@ Perl_parse_subsignature(pTHX)
 
             if (defexpr) {
                 initops = op_append_elem(OP_LINESEQ, initops,
-                                    newSTATEOP(0, NULL, NULL));
+                                         newSTATEOP(0, NULL, NULL));
                 initops = op_append_elem(OP_LINESEQ, initops, defexpr);
             }
 

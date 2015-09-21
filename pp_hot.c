@@ -3528,14 +3528,14 @@ PP(pp_entersub)
 
     gimme = GIMME_V;
 
-    if (!CvISXSUB(cv)) {
+    if (LIKELY(!CvISXSUB(cv))) {
 	/* This path taken at least 75% of the time   */
 	dMARK;
 	PADLIST * const padlist = CvPADLIST(cv);
         I32 depth;
 
         /* A XS function can be redefined back to a normal sub */
-        if (PL_op->op_type == OP_ENTERXSSUB) {
+        if (UNLIKELY(PL_op->op_type == OP_ENTERXSSUB)) {
             OpTYPE_set(PL_op, OP_ENTERSUB);
             (void)INCMARK; ++sp; /* and fixup stack */
 #ifdef DEBUGGING
@@ -3560,6 +3560,8 @@ PP(pp_entersub)
             if (CvHASSIG(cv)) { /* and no @_, same call abi as with ops */
                 /* the start of the args on the stack, pp_signature does the rest */
                 cx->blk_sub.argarray = (AV*)(MARK+1);
+                /* nextstate in the body resets our SP */
+                cx->blk_sub.savearray = (AV*)SP;
             } else {
                 AV *const av = MUTABLE_AV(PAD_SVl(0));
                 SSize_t items;
@@ -3574,8 +3576,7 @@ PP(pp_entersub)
                 defavp = &GvAV(PL_defgv);
                 cx->blk_sub.savearray = *defavp;
                 *defavp = MUTABLE_AV(SvREFCNT_inc_simple_NN(av));
-                /* copy from stack to @_ */
-                cx->blk_sub.argarray = av;
+                cx->blk_sub.argarray = av; /* copy from stack to @_ */
                 items = SP - MARK;
                 if (UNLIKELY(items - 1 > AvMAX(av))) {
                     SV **ary = AvALLOC(av);
@@ -3868,7 +3869,8 @@ PP(pp_signature)
 
         if (hassig) {
             SV **MARK = (SV**)cx->blk_sub.argarray;
-            argc = SP - MARK + 2;
+            SP = (SV**)cx->blk_sub.savearray;
+            argc = SP - MARK + 1;
             argp = MARK;
         } else {
             defav = GvAV(PL_defgv);
@@ -4153,8 +4155,12 @@ PP(pp_signature)
             if (!argc || (actions & SIGNATURE_FLAG_ref))
                 goto finish;
             if (UNLIKELY(argc % 2)) {
-                if (!(PL_op->op_private & OPpSIGNATURE_FAKE))
-                    S_croak_caller("Odd name/value argument for subroutine");
+                if (!(PL_op->op_private & OPpSIGNATURE_FAKE)) {
+                    PERL_CONTEXT *cx = &cxstack[cxstack_ix];
+                    const CV *cv = cx->blk_sub.cv;
+                    S_croak_caller("Odd name/value argument for %s%s%s %s", CvDESC3(cv),
+                                   SvPVX_const(cv_name((CV*)cv,NULL,CV_NAME_NOMAIN)));
+                }
                 /* warn */
                 do_oddball(argp + argc -1, argp);
             }
