@@ -3353,26 +3353,24 @@ PP(pp_entersub)
 	SAVECOMPPAD();
 	PAD_SET_CUR_NOSAVE(padlist, depth);
 	if (LIKELY(hasargs)) {
-	    AV *const av = MUTABLE_AV(PAD_SVl(0));
-            SSize_t items;
-            AV **defavp;
-
-	    if (UNLIKELY(AvREAL(av))) {
-		/* @_ is normally not REAL--this should only ever
-		 * happen when DB::sub() calls things that modify @_ */
-		av_clear(av);
-		AvREAL_off(av);
-		AvREIFY_on(av);
-	    }
-	    defavp = &GvAV(PL_defgv);
-	    cx->blk_sub.savearray = *defavp;
-	    *defavp = MUTABLE_AV(SvREFCNT_inc_simple_NN(av));
 	    CX_CURPAD_SAVE(cx->blk_sub);
-
             if (CvHASSIG(cv)) { /* and no @_, same call abi as with ops */
                 /* the start of the args on the stack, pp_signature does the rest */
                 cx->blk_sub.argarray = (AV*)(MARK+1);
             } else {
+                AV *const av = MUTABLE_AV(PAD_SVl(0));
+                SSize_t items;
+                AV **defavp;
+                if (UNLIKELY(AvREAL(av))) {
+                    /* @_ is normally not REAL--this should only ever
+                     * happen when DB::sub() calls things that modify @_ */
+                    av_clear(av);
+                    AvREAL_off(av);
+                    AvREIFY_on(av);
+                }
+                defavp = &GvAV(PL_defgv);
+                cx->blk_sub.savearray = *defavp;
+                *defavp = MUTABLE_AV(SvREFCNT_inc_simple_NN(av));
                 /* copy from stack to @_ */
                 cx->blk_sub.argarray = av;
                 items = SP - MARK;
