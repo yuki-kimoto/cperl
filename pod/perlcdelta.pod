@@ -17,6 +17,18 @@ For B<cperl> see F<Changes> and L<perlcperl>
 
 =item *
 
+Support for builtin and efficient signatures. See L<perlsub/Signatures> and
+L<perlfunc/prototype>.
+The C<prototype> function returns the parsed string of a declared
+signature if no prototype attribute overrides it.
+
+The C<@_> array inside a function body with a signature is empty. With
+default parameters there's is currently no way to find out how many
+actual arguments were provided, and how many were filled out with
+defaults.
+
+=item *
+
 Better support for -DC and -DCv debugging, with new REFCNT statistics.
 Added CowREFCNT_inc,dec and overflow assertions.
 

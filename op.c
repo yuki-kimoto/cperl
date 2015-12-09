@@ -2640,6 +2640,7 @@ S_maybe_op_signature(pTHX_ CV *cv, OP *o)
 
     sigop = newUNOP_AUX(OP_SIGNATURE, 0, NULL, items + 1);
     sigop->op_private |= OPpSIGNATURE_FAKE; /* not a real signature */
+    CvSIGOP(cv) = (UNOP_AUX*)sigop;
 
     /* excise the aassign from the lineseq and
      * replace them with the OP_SIGNATURE */
