@@ -31,6 +31,18 @@ phase for every attribute, falling back to C<FETCH_type_ATTRIBUTES>.
 Less C<-Wnonnull-compare> compilation warnings, use more C<_NN> macros.
 I.e. dont check for arguments which cannot be null.
 
+=item *
+
+Support for builtin and efficient signatures. See L<perlsub/Signatures> and
+L<perlfunc/prototype>.
+The C<prototype> function returns the parsed string of a declared
+signature if no prototype attribute overrides it.
+
+The C<@_> array inside a function body with a signature is empty. With
+default parameters there's is currently no way to find out how many
+actual arguments were provided, and how many were filled out with
+defaults.
+
 =back
 
 =head1 Modules and Pragmata
