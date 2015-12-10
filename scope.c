@@ -484,6 +484,8 @@ Perl_save_sptr(pTHX_ SV **sptr)
 {
     PERL_ARGS_ASSERT_SAVE_SPTR;
 
+    DEBUG_Xv(PerlIO_printf(Perl_debug_log,
+                           "save_sptr: sv=0x%"UVxf"\n", PTR2UV(*sptr)));
     save_pushptrptr(*sptr, sptr, SAVEt_SPTR);
 }
 
@@ -799,6 +801,9 @@ Perl_leave_scope(pTHX_ I32 base)
 
 	switch (type) {
 	case SAVEt_ITEM:			/* normal string */
+            DEBUG_Xv(PerlIO_printf(Perl_debug_log,
+                                   "restore: sv=0x%"UVxf" => 0x%"UVxf"\n",
+                                   PTR2UV(ARG0_SV), PTR2UV(ARG1_SV)));
 	    sv_replace(ARG1_SV, ARG0_SV);
             if (UNLIKELY(SvSMAGICAL(ARG1_SV))) {
                 PL_localizing = 2;
@@ -931,6 +936,9 @@ Perl_leave_scope(pTHX_ I32 base)
                 *(I32*)ARG0_PTR = ARG1_I32;
 	    break;
 	case SAVEt_SPTR:			/* SV* reference */
+            DEBUG_Xv(PerlIO_printf(Perl_debug_log,
+                                   "restore: &sv=0x%"UVxf" => &0x%"UVxf"\n",
+                                   PTR2UV(ARG0_PTR), PTR2UV(ARG1_SV)));
 	    *(SV**)(ARG0_PTR)= ARG1_SV;
 	    break;
 	case SAVEt_VPTR:			/* random* reference */
@@ -1067,7 +1075,7 @@ Perl_leave_scope(pTHX_ I32 base)
                            adding a ; after them would be wrong. */
                         assert_not_ROK(sv)
                         assert_not_glob(sv)
-                        SvFLAGS(sv) &=~ (SVf_OK|SVf_IVisUV|SVf_UTF8);
+                        SvFLAGS(sv) &= ~(SVf_OK|SVf_IVisUV|SVf_UTF8);
                         break;
                     }
                     SvPADTMP_off(sv);
