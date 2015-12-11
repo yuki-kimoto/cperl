@@ -101,6 +101,7 @@ my %skip;
          cpan/Devel-PPPort/PPPort_pm.PL
 	 cpan/Scalar-List-Utils/ListUtil.xs
 	 cpan/IPC-SysV/SysV.xs
+         cpan/B-Debug/Debug.pm
         )} = ();
 
 # Files to skip just for particular version(s),
