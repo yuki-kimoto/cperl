@@ -12400,6 +12400,19 @@ Perl_parse_subsignature(pTHX)
        A cop before a sig resets SP which resets argc to 0. */
     /*initops = newSTATEOP(0, NULL, st.sig_op);*/
 
+    /* implicit my $self = shift; */
+    /* TODO: support optional $self: syntax for first arg */
+    if (CvMETHOD(PL_compcv)) {
+        OP* left = scalar(newOP(OP_PADSV, OPf_MOD|OPf_REF|OPf_SPECIAL
+                                         |(OPpLVAL_INTRO<<8)));
+        OP* right = newUNOP(OP_SHIFT, 0,
+                            newUNOP(OP_RV2AV, 0, newGVOP(OP_GV, 0, PL_defgv)));
+        left->op_targ = allocmy("$self", 5, 0);
+        initops = op_append_list(OP_LINESEQ, initops,
+                      newSTATEOP(0, NULL,
+                          newASSIGNOP(OPf_STACKED, left, 0, right)));
+    }
+
     lex_read_space(0);
     c = lex_peek_unichar(0);
 
