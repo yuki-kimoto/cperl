@@ -12062,8 +12062,11 @@ Done:
 - no double copies into @_
 - scalar references compiled to direct access, not just copies
   (\$a) => my $a = $_[0].
+- call-by-value and call-by-ref supported. call-by-ref could be improved through
+  so we don't change constants to be called-by-ref, and rather copy it. 
 Todo:
 - error in ck_subr when @_/$_[] in signatured bodies is used
+- add invocant. check $class: syntax or add default $self on CvMETHOD
 
 =cut
 */
@@ -12128,6 +12131,14 @@ Perl_parse_subsignature(pTHX)
     /* Note that this is illegal, but skipped in prune_chain_head().
        A cop before a sig resets SP which resets argc to 0. */
     /*initops = newSTATEOP(0, NULL, st.sig_op);*/
+
+    /* TODO: support $self: syntax for first arg. move below then */
+    if (CvMETHOD(PL_compcv)) {
+        pad_base = allocmy("$self", 5, 0);
+        padintro_ix = st.items_ix;
+        PUSH_ITEM(uv, 0);
+        S_sig_push_action(aTHX_ stp, SIGNATURE_arg);
+    }
 
     lex_read_space(0);
     c = lex_peek_unichar(0);
