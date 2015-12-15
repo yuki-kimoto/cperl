@@ -1,7 +1,7 @@
 package bigint;
 use 5.006;
 
-$VERSION = '0.39';
+$VERSION = '0.39c';
 use Exporter;
 @ISA		= qw( Exporter );
 @EXPORT_OK	= qw( PI e bpi bexp hex oct );
@@ -47,28 +47,26 @@ sub AUTOLOAD
   }
 
 sub upgrade
-  {
+{
   $Math::BigInt::upgrade;
-  }
+}
 
-sub _binary_constant
-  {
+sub _binary_constant (str $string)
+{
   # this takes a binary/hexadecimal/octal constant string and returns it
   # as string suitable for new. Basically it converts octal to decimal, and
   # passes every thing else unmodified back.
-  my $string = shift;
 
   return Math::BigInt->new($string) if $string =~ /^0[bx]/;
 
   # so it must be an octal constant
   Math::BigInt->from_oct($string);
-  }
+}
 
-sub _float_constant
-  {
+sub _float_constant (num $float)
+{
   # this takes a floating point constant string and returns it truncated to
   # integer. For instance, '4.5' => '4', '1.234e2' => '123' etc
-  my $float = shift;
 
   # some simple cases first
   return $float if ($float =~ /^[+-]?[0-9]+$/);		# '+123','-1','0' etc
@@ -76,46 +74,43 @@ sub _float_constant
     if ($float =~ /^[+-]?[0-9]+\.?[eE]\+?[0-9]+$/);	# 123e2, 123.e+2
   return '0' if ($float =~ /^[+-]?[0]*\.[0-9]+$/);	# .2, 0.2, -.1
   if ($float =~ /^[+-]?[0-9]+\.[0-9]*$/)		# 1., 1.23, -1.2 etc
-    {
+  {
     $float =~ s/\..*//;
     return $float;
-    }
+  }
   my ($mis,$miv,$mfv,$es,$ev) = Math::BigInt::_split($float);
   return $float if !defined $mis; 	# doesn't look like a number to me
   my $ec = int($$ev);
   my $sign = $$mis; $sign = '' if $sign eq '+';
-  if ($$es eq '-')
-    {
+  if ($$es eq '-') {
     # ignore fraction part entirely
-    if ($ec >= length($$miv))			# 123.23E-4
-      {
+    if ($ec >= length($$miv)) {	 		# 123.23E-4
       return '0';
-      }
-    return $sign . substr ($$miv,0,length($$miv)-$ec);	# 1234.45E-2 = 12
     }
+    return $sign . substr ($$miv,0,length($$miv)-$ec);	# 1234.45E-2 = 12
+  }
   # xE+y
-  if ($ec >= length($$mfv))
-    {
+  if ($ec >= length($$mfv)) {
     $ec -= length($$mfv);			
     return $sign.$$miv.$$mfv if $ec == 0;	# 123.45E+2 => 12345
     return $sign.$$miv.$$mfv.'E'.$ec; 		# 123.45e+3 => 12345e1
-    }
+  }
   $mfv = substr($$mfv,0,$ec);
   $sign.$$miv.$mfv; 				# 123.45e+1 => 1234
-  }
+}
 
-sub unimport
-  {
+sub unimport ()
+{
   $^H{bigint} = undef;					# no longer in effect
   overload::remove_constant('binary','','float','','integer');
-  }
+}
 
-sub in_effect
-  {
-  my $level = shift || 0;
+sub in_effect (int $level = 0)
+{
+  #my $level = shift || 0;
   my $hinthash = (caller($level))[10];
   $hinthash->{bigint};
-  }
+}
 
 #############################################################################
 # the following two routines are for "use bigint qw/hex oct/;":
@@ -171,8 +166,8 @@ sub _oct(_)
   }
 .
 
-sub _override
-  {
+sub _override ()
+{
   return if $overridden;
   $prev_oct = *CORE::GLOBAL::oct{CODE};
   $prev_hex = *CORE::GLOBAL::hex{CODE};
@@ -180,19 +175,18 @@ sub _override
   *CORE::GLOBAL::oct = \&_oct;
   *CORE::GLOBAL::hex = \&_hex;
   $overridden++;
-  }
+}
 
-sub import 
-  {
+sub import () :method
+{
   my $self = shift;
 
   $^H{bigint} = 1;					# we are in effect
 
   # for newer Perls always override hex() and oct() with a lexical version:
-  if (LEXICAL)
-    {
+  if (LEXICAL) {
     _override();
-    }
+  }
   # some defaults
   my $lib = ''; my $lib_kind = 'try';
 
@@ -201,78 +195,62 @@ sub import
   my ($ver,$trace);					# version? trace?
   my ($a,$p);						# accuracy, precision
   for ( my $i = 0; $i < $l ; $i++,$j++ )
-    {
-    if ($_[$i] =~ /^(l|lib|try|only)$/)
-      {
+  {
+    if ($_[$i] =~ /^(l|lib|try|only)$/) {
       # this causes a different low lib to take care...
       $lib_kind = $1; $lib_kind = 'lib' if $lib_kind eq 'l';
       $lib = $_[$i+1] || '';
       my $s = 2; $s = 1 if @a-$j < 2;	# avoid "can not modify non-existent..."
       splice @a, $j, $s; $j -= $s; $i++;
-      }
-    elsif ($_[$i] =~ /^(a|accuracy)$/)
-      {
+    } elsif ($_[$i] =~ /^(a|accuracy)$/) {
       $a = $_[$i+1];
       my $s = 2; $s = 1 if @a-$j < 2;	# avoid "can not modify non-existent..."
       splice @a, $j, $s; $j -= $s; $i++;
-      }
-    elsif ($_[$i] =~ /^(p|precision)$/)
-      {
+    } elsif ($_[$i] =~ /^(p|precision)$/) {
       $p = $_[$i+1];
       my $s = 2; $s = 1 if @a-$j < 2;	# avoid "can not modify non-existent..."
       splice @a, $j, $s; $j -= $s; $i++;
-      }
-    elsif ($_[$i] =~ /^(v|version)$/)
-      {
+    } elsif ($_[$i] =~ /^(v|version)$/) {
       $ver = 1;
       splice @a, $j, 1; $j --;
-      }
-    elsif ($_[$i] =~ /^(t|trace)$/)
-      {
+    } elsif ($_[$i] =~ /^(t|trace)$/) {
       $trace = 1;
       splice @a, $j, 1; $j --;
-      }
-    elsif ($_[$i] !~ /^(PI|e|bpi|bexp|hex|oct)\z/)
-      {
+    } elsif ($_[$i] !~ /^(PI|e|bpi|bexp|hex|oct)\z/) {
       die ("unknown option $_[$i]");
-      }
     }
+  }
   my $class;
   $_lite = 0;					# using M::BI::L ?
-  if ($trace)
-    {
+  if ($trace) {
     require Math::BigInt::Trace; $class = 'Math::BigInt::Trace';
-    }
-  else
-    {
+  }
+  else {
     # see if we can find Math::BigInt::Lite
-    if (!defined $a && !defined $p)		# rounding won't work to well
-      {
-      if (eval { require Math::BigInt::Lite; 1 })
-        {
+    if (!defined $a && !defined $p) {		# rounding won't work to well
+      if (eval { require Math::BigInt::Lite; 1 }) {
         @import = ( );				# :constant in Lite, not MBI
         Math::BigInt::Lite->import( ':constant' );
         $_lite= 1;				# signal okay
-        }
       }
+    }
     require Math::BigInt if $_lite == 0;	# not already loaded?
     $class = 'Math::BigInt';			# regardless of MBIL or not
-    }
+  }
   push @import, $lib_kind => $lib if $lib ne '';
   # Math::BigInt::Trace or plain Math::BigInt
   $class->import(@import);
 
   bigint->accuracy($a) if defined $a;
   bigint->precision($p) if defined $p;
-  if ($ver)
-    {
+  if ($ver) {
     print "bigint\t\t\t v$VERSION\n";
     print "Math::BigInt::Lite\t v$Math::BigInt::Lite::VERSION\n" if $_lite;
     print "Math::BigInt\t\t v$Math::BigInt::VERSION";
     my $config = Math::BigInt->config();
     print " lib => $config->{lib} v$config->{lib_version}\n";
     exit;
-    }
+  }
   # we take care of floating point constants, since BigFloat isn't available
   # and BigInt doesn't like them:
   overload::constant float => sub { Math::BigInt->new( _float_constant(shift) ); };
@@ -283,11 +261,10 @@ sub import
   my ($package) = caller();
 
   no strict 'refs';
-  if (!defined *{"${package}::inf"})
-    {
+  if (!defined *{"${package}::inf"}) {
     $self->export_to_level(1,$self,@a);           # export inf and NaN, e and PI
-    }
   }
+}
 
 sub inf () { Math::BigInt::binf(); }
 sub NaN () { Math::BigInt::bnan(); }
