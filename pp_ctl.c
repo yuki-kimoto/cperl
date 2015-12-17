@@ -2681,7 +2681,11 @@ PP(pp_goto)
 	SV * const sv = POPs;
 	SvGETMAGIC(sv);
 
-	/* This egregious kludge implements goto &subroutine */
+	/* This egregious kludge implements goto &subroutine,
+           aka tail calls.
+           cv is the sub we are jumping to.
+           cx->blk_sub is the context of the sub we are coming from.
+        */
 	if (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PVCV) {
 	    I32 cxix;
 	    PERL_CONTEXT *cx;
@@ -2740,10 +2744,29 @@ PP(pp_goto)
 	    }
 	    if (CxTYPE(cx) == CXt_SUB && CxHASARGS(cx)) {
 		AV* av = cx->blk_sub.argarray;
-
+                if (CvHASSIG(cv)) { /* @_ -> SP */
+                    CV* cursub = cx->blk_sub.cv;
+                    cx->blk_sub.cv = cv; /* adjust context */
+                    if (CvHASSIG(cursub)) { /* sig2sig. no @_, just SP-MARK */
+                        arg = av; /* mark */
+                        DEBUG_kv(PerlIO_printf(Perl_debug_log,
+                             "goto %s from sig with sig: keep %ld args\n",
+                             SvPVX_const(cv_name(cv, NULL, CV_NAME_NOMAIN)),
+                             cx->blk_sub.savearray - av + 1)); /* sp-mark+1 */
+                        /*PUSHMARK((SV**)cx->blk_sub.savearray);*/
+                        goto call_pp_sub;
+                    } /* pp2sig */
+                    DEBUG_kv(PerlIO_printf(Perl_debug_log,
+                        "goto %s with sig: keep %ld args\n",
+                        SvPVX_const(cv_name(cv, NULL, CV_NAME_NOMAIN)),
+                        AvFILLp(arg)+1)); /* sig arg has no fill */
+                    /*PAD_SVl(0) = MUTABLE_SV(cx->blk_sub.argarray = arg);*/
+                    /*cx->blk_sub.savearray = av - AvFILLp(arg);*/
+                    /*goto call_pp_sub;*/
+                }
 		/* abandon the original @_ if it got reified or if it is
 		   the same as the current @_ */
-		if (AvREAL(av) || av == arg) {
+		else if ((AvREAL(av) || av == arg)) {
 		    SvREFCNT_dec(av);
 		    av = newAV();
 		    AvREIFY_only(av);
@@ -2776,11 +2799,11 @@ PP(pp_goto)
 	    /* Now do some callish stuff. */
 	    SAVETMPS;
 	    SAVEFREESV(cv); /* later, undo the 'avoid premature free' hack */
-	    if (CvISXSUB(cv)) {
+	    if (CvISXSUB(cv) || CvHASSIG(cv)) {
 		SV **newsp;
 		I32 gimme;
 		const SSize_t items = arg ? AvFILL(arg) + 1 : 0;
-		const bool m = arg ? cBOOL(SvRMAGICAL(arg)) : 0;
+		const bool magical = arg ? cBOOL(SvRMAGICAL(arg)) : 0;
 		SV** mark;
 
                 PERL_UNUSED_VAR(newsp);
@@ -2797,7 +2820,7 @@ PP(pp_goto)
 		    for (index=0; index<items; index++)
 		    {
 			SV *sv;
-			if (m) {
+			if (magical) {
 			    SV ** const svp = av_fetch(arg, index, 0);
 			    sv = svp ? *svp : NULL;
 			}
@@ -2809,20 +2832,39 @@ PP(pp_goto)
 		}
 		SP += items;
 		SvREFCNT_dec(arg);
+                if (CvHASSIG(cv)) {
+                    PADLIST * const padlist = CvPADLIST(cv);
+                    cx->blk_sub.argarray = cx->blk_sub.savearray = (AV*)MARK;
+                    cx->blk_sub.savearray += (items-1);
+                    /*cx->blk_sub.cv = cv; already done above */
+                    cx->blk_sub.olddepth = CvDEPTH(cv);
+
+                    CvDEPTH(cv)++;
+                    if (CvDEPTH(cv) < 2)
+                        SvREFCNT_inc_simple_void_NN(cv);
+                    else {
+                        if (CvDEPTH(cv) == PERL_SUB_DEPTH_WARN && ckWARN(WARN_RECURSION))
+                            sub_crush_depth(cv);
+                        pad_push(padlist, CvDEPTH(cv));
+                    }
+                    PL_curcop = cx->blk_oldcop;
+                    SAVECOMPPAD();
+                    PAD_SET_CUR_NOSAVE(padlist, CvDEPTH(cv));
+                    goto call_pp_sub;
+                }
 		if (CxTYPE(cx) == CXt_SUB && CxHASARGS(cx)) {
 		    /* Restore old @_ */
 		    arg = GvAV(PL_defgv);
 		    GvAV(PL_defgv) = cx->blk_sub.savearray;
 		    SvREFCNT_dec(arg);
 		}
-
 		retop = cx->blk_sub.retop;
 		/* XS subs don't have a CxSUB, so pop it */
 		POPBLOCK(cx, PL_curpm);
-		/* Push a mark for the start of arglist */
-		PUSHMARK(mark);
+                /* Push a mark for the start of arglist */
+                PUSHMARK(mark);
 		PUTBACK;
-		(void)(*CvXSUB(cv))(aTHX_ cv);
+                (void)(*CvXSUB(cv))(aTHX_ cv);
 		LEAVE;
 		goto _return;
 	    }
@@ -2866,6 +2908,7 @@ PP(pp_goto)
 		    }
 		}
 		else SvREFCNT_dec(arg);
+            call_pp_sub:
 		if (PERLDB_SUB) {	/* Checking curstash breaks DProf. */
 		    get_db_sub(NULL, cv);
 		    if (PERLDB_GOTO) {
