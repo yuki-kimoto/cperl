@@ -4,35 +4,37 @@ package Pod::Simple::Methody;
 use strict;
 use Pod::Simple ();
 use vars qw(@ISA $VERSION);
-$VERSION = '3.30';
+use cperl;
+our $VERSION = '4.30c'; #modernized
+$VERSION =~ s/c$//;
 @ISA = ('Pod::Simple');
 
 # Yes, we could use named variables, but I want this to be impose
 # as little an additional performance hit as possible.
 
-sub _handle_element_start {
-  $_[1] =~ tr/-:./__/;
-  ( $_[0]->can( 'start_' . $_[1] )
+sub _handle_element_start ($self, str $ele, $attr?) {
+  $ele =~ tr/-:./__/;
+  ( $self->can( 'start_' . $ele )
     || return
   )->(
-    $_[0], $_[2]
+    $self, $attr
   );
 }
 
-sub _handle_text {
-  ( $_[0]->can( 'handle_text' )
+sub _handle_text ($self, @attrs) {
+  ( $self->can( 'handle_text' )
     || return
   )->(
-    @_
+    $self, @attrs
   );
 }
 
-sub _handle_element_end {
-  $_[1] =~ tr/-:./__/;
-  ( $_[0]->can( 'end_' . $_[1] )
+sub _handle_element_end ($self, str $ele, $attr?) {
+  $ele =~ tr/-:./__/;
+  ( $self->can( 'end_' . $ele )
     || return
   )->(
-    $_[0], $_[2]
+    $self, $attr
   );
 }
 

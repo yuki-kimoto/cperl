@@ -2,13 +2,13 @@
 require 5;
 package Pod::Simple::LinkSection;
   # Based somewhat dimly on Array::Autojoin
-use vars qw($VERSION );
-$VERSION = '3.30';
+#use vars qw($VERSION );
+#use cperl;
+our $VERSION = '3.30';
+#$VERSION =~ s/c$//;
 
 use strict;
 use Pod::Simple::BlackBox;
-use vars qw($VERSION );
-$VERSION = '3.30';
 
 use overload( # So it'll stringify nice
   '""'   => \&Pod::Simple::BlackBox::stringify_lol,

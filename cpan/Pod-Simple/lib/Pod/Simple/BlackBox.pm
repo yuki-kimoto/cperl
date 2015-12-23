@@ -22,8 +22,10 @@ use integer; # vroom!
 use strict;
 use Carp ();
 use vars qw($VERSION );
-$VERSION = '3.30';
-#use constant DEBUG => 7;
+use cperl;
+our $VERSION = '4.30c';
+$VERSION =~ s/c$//;
+use constant DEBUG => 0; # 7
 BEGIN {
   require Pod::Simple;
   *DEBUG = \&Pod::Simple::DEBUG unless defined &DEBUG
@@ -45,13 +47,12 @@ if (($] ge 5.007_003)) {
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-sub parse_line { shift->parse_lines(@_) } # alias
+sub parse_line ($self, @lines) { $self->parse_lines(@lines) } # alias
 
 # - - -  Turn back now!  Run away!  - - -
 
-sub parse_lines {             # Usage: $parser->parse_lines(@lines)
+sub parse_lines ($self, @lines) {
   # an undef means end-of-stream
-  my $self = shift;
 
   my $code_handler = $self->{'code_handler'};
   my $cut_handler  = $self->{'cut_handler'};
@@ -65,7 +66,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
 
   DEBUG > 5 and
    print "#  About to parse lines: ",
-     join(' ', map defined($_) ? "[$_]" : "EOF", @_), "\n";
+     join(' ', map defined($_) ? "[$_]" : "EOF", @lines), "\n";
 
   my $paras = ($self->{'paras'} ||= []);
    # paragraph buffer.  Because we need to defer processing of =over
@@ -75,7 +76,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
   $self->{'pod_para_count'} ||= 0;
 
   my $line;
-  foreach my $source_line (@_) {
+  foreach my $source_line (@lines) {
     if( $self->{'source_dead'} ) {
       DEBUG > 4 and print "# Source is dead.\n";
       last;
@@ -113,8 +114,8 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
           $self->{'line_count'},
           "UTF16-BE Byte Encoding Mark found; but Pod::Simple v$Pod::Simple::VERSION doesn't implement UTF16 yet."
         );
-        splice @_;
-        push @_, undef;
+        splice @lines;
+        push @lines, undef;
         next;
 
         # TODO: implement somehow?
@@ -125,8 +126,8 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
           $self->{'line_count'},
           "UTF16-LE Byte Encoding Mark found; but Pod::Simple v$Pod::Simple::VERSION doesn't implement UTF16 yet."
         );
-        splice @_;
-        push @_, undef;
+        splice @lines;
+        push @lines, undef;
         next;
 
         # TODO: implement somehow?
@@ -383,9 +384,8 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-sub _handle_encoding_line {
-  my($self, $line) = @_;
-  
+sub _handle_encoding_line ($self, $line) {
+
   return if $self->parse_characters;
 
   # The point of this routine is to set $self->{'_transcoder'} as indicated.
@@ -485,10 +485,9 @@ sub _handle_encoding_line {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-sub _handle_encoding_second_level {
+sub _handle_encoding_second_level ($self, $para) {
   # By time this is called, the encoding (if well formed) will already
   #  have been acted one.
-  my($self, $para) = @_;
   my @x = @$para;
   my $content = join ' ', splice @x, 2;
   $content =~ s/^\s+//s;
@@ -529,8 +528,7 @@ sub _handle_encoding_second_level {
 {
 my $m = -321;   # magic line number
 
-sub _gen_errata {
-  my $self = $_[0];
+sub _gen_errata ($self) {
   # Return 0 or more fake-o paragraphs explaining the accumulated
   #  errors on this document.
 
@@ -587,7 +585,7 @@ sub _gen_errata {
 ##
 ##############################################################################
 
-sub _ponder_paragraph_buffer {
+sub _ponder_paragraph_buffer ($self) {
 
   # Para-token types as found in the buffer.
   #   ~Verbatim, ~Para, ~end, =head1..4, =for, =begin, =end,
@@ -607,7 +605,6 @@ sub _ponder_paragraph_buffer {
   #                   B, C, longdirname (TODO -- wha?), etc. for all directives
   # 
 
-  my $self = $_[0];
   my $paras;
   return unless @{$paras = $self->{'paras'}};
   my $curr_open = ($self->{'curr_open'} ||= []);
@@ -993,8 +990,7 @@ sub _ponder_paragraph_buffer {
 
 
 
-sub _ponder_for {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_for ($self,$para,$curr_open,$paras) {
 
   # Fake it out as a begin/end
   my $target;
@@ -1037,8 +1033,7 @@ sub _ponder_for {
   return 1;
 }
 
-sub _ponder_begin {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_begin ($self,$para,$curr_open,$paras) {
   my $content = join ' ', splice @$para, 2;
   $content =~ s/^\s+//s;
   $content =~ s/\s+$//s;
@@ -1115,8 +1110,7 @@ sub _ponder_begin {
   return 1;
 }
 
-sub _ponder_end {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_end ($self,$para,$curr_open,$paras) {
   my $content = join ' ', splice @$para, 2;
   $content =~ s/^\s+//s;
   $content =~ s/\s+$//s;
@@ -1185,8 +1179,7 @@ sub _ponder_end {
   return 1;
 } 
 
-sub _ponder_doc_end {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_doc_end ($self,$para,$curr_open,$paras) {
   if(@$curr_open) { # Deal with things left open
     DEBUG and print "Stack is nonempty at end-document: (",
       $self->_dump_curr_open(), ")\n";
@@ -1223,8 +1216,7 @@ sub _ponder_doc_end {
   return 1; # Hasta la byebye
 }
 
-sub _ponder_pod {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_pod ($self,$para,$curr_open,$paras) {
   $self->whine(
     $para->[1]{'start_line'},
     "=pod directives shouldn't be over one line long!  Ignoring all "
@@ -1245,8 +1237,7 @@ sub _ponder_pod {
   return;
 }
 
-sub _ponder_over {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_over ($self,$para,$curr_open,$paras) {
   return 1 unless @$paras;
   my $list_type;
 
@@ -1303,8 +1294,7 @@ sub _ponder_over {
   return;
 }
       
-sub _ponder_back {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_back ($self,$para,$curr_open,$paras) {
   # TODO: fire off </item-number> or </item-bullet> or </item-text> ??
 
   my $content = join ' ', splice @$para, 2;
@@ -1321,7 +1311,7 @@ sub _ponder_back {
     #my $over = pop @$curr_open;
     $self->{'content_seen'} ||= 1;
     $self->_handle_element_end( my $scratch =
-      'over-' . ( (pop @$curr_open)->[1]{'~type'} ), $para->[1]
+      'over-' . ( (pop @$curr_open)->[1]{'~type'} )
     );
   } else {
     DEBUG > 1 and print "=back found without a matching =over.  Stack: (",
@@ -1334,8 +1324,7 @@ sub _ponder_back {
   }
 }
 
-sub _ponder_item {
-  my ($self,$para,$curr_open,$paras) = @_;
+sub _ponder_item ($self,$para,$curr_open,$paras) {
   my $over;
   unless(@$curr_open and
          $over = (grep { $_->[0] eq '=over' } @$curr_open)[-1]) {
@@ -1505,8 +1494,7 @@ sub _ponder_item {
   return;
 }
 
-sub _ponder_Plain {
-  my ($self,$para) = @_;
+sub _ponder_Plain ($self,$para) {
   DEBUG and print " giving plain treatment...\n";
   unless( @$para == 2 or ( @$para == 3 and $para->[2] eq '' )
     or $para->[1]{'~cooked'}
@@ -1522,8 +1510,7 @@ sub _ponder_Plain {
   return;
 }
 
-sub _ponder_Verbatim {
-  my ($self,$para) = @_;
+sub _ponder_Verbatim ($self,$para) {
   DEBUG and print " giving verbatim treatment...\n";
 
   $para->[1]{'xml:space'} = 'preserve';
@@ -1573,8 +1560,7 @@ sub _ponder_Verbatim {
   return;
 }
 
-sub _ponder_Data {
-  my ($self,$para) = @_;
+sub _ponder_Data ($self,$para) {
   DEBUG and print " giving data treatment...\n";
   $para->[1]{'xml:space'} = 'preserve';
   push @$para, join "\n", splice(@$para, 2) if @$para > 3;
@@ -1586,18 +1572,16 @@ sub _ponder_Data {
 
 ###########################################################################
 
-sub _traverse_treelet_bit {  # for use only by the routine above
-  my($self, $name) = splice @_,0,2;
-
+sub _traverse_treelet_bit ($self, $name, @args) {  # for use only by the routine above
   my $scratch;
-  $self->_handle_element_start(($scratch=$name), shift @_);
+  $self->_handle_element_start(($scratch=$name), shift @args);
   
-  while (@_) {
-    my $x = shift;
+  while (@args) {
+    my $x = shift @args;
     if (ref($x)) {
       &_traverse_treelet_bit($self, @$x);
     } else {
-      $x .= shift while @_ && !ref($_[0]);
+      $x .= shift @args while @args && !ref($args[0]);
       $self->_handle_text($x);
     }
   }
@@ -1608,8 +1592,7 @@ sub _traverse_treelet_bit {  # for use only by the routine above
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-sub _closers_for_all_curr_open {
-  my $self = $_[0];
+sub _closers_for_all_curr_open ($self) {
   my @closers;
   foreach my $still_open (@{  $self->{'curr_open'} || return  }) {
     my @copy = @$still_open;
@@ -1644,11 +1627,9 @@ sub _closers_for_all_curr_open {
 
 #--------------------------------------------------------------------------
 
-sub _verbatim_format {
-  my($it, $p) = @_;
-  
-  my $formatting;
+sub _verbatim_format ($it, $p) {
 
+  my $formatting;
   for(my $i = 2; $i < @$p; $i++) { # work backwards over the lines
     DEBUG and print "_verbatim_format appends a newline to $i: $p->[$i]\n";
     $p->[$i] .= "\n";
@@ -1779,16 +1760,16 @@ sub _verbatim_format {
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
-sub _treelet_from_formatting_codes {
-  # Given a paragraph, returns a treelet.  Full of scary tokenizing code.
+sub _treelet_from_formatting_codes
+    ($self, $para, $start_line, $preserve_space?)
+{
+  # Given a paragraph, returns a treelet, nested nodes and tokens.
   #  Like [ '~Top', {'start_line' => $start_line},
   #            "I like ",
   #            [ 'B', {}, "pie" ],
   #            "!"
   #       ]
-  
-  my($self, $para, $start_line, $preserve_space) = @_;
-  
+
   my $treelet = ['~Top', {'start_line' => $start_line},];
   
   unless ($preserve_space || $self->{'preserve_whitespace'}) {
@@ -1994,8 +1975,8 @@ sub _treelet_from_formatting_codes {
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-sub text_content_of_treelet {  # method: $parser->text_content_of_treelet($lol)
-  return stringify_lol($_[1]);
+sub text_content_of_treelet ($, $lol) {  # method: $parser->text_content_of_treelet($lol)
+  return stringify_lol($lol);
 }
 
 sub stringify_lol {  # function: stringify_lol($lol)
@@ -2004,8 +1985,7 @@ sub stringify_lol {  # function: stringify_lol($lol)
   return $string_form;
 }
 
-sub _stringify_lol {  # the real recursor
-  my($lol, $to) = @_;
+sub _stringify_lol ($lol, $to) {  # the real recursor
   for(my $i = 2; $i < @$lol; ++$i) {
     if( ref($lol->[$i] || '') and UNIVERSAL::isa($lol->[$i], 'ARRAY') ) {
       _stringify_lol( $lol->[$i], $to);  # recurse!
@@ -2051,10 +2031,9 @@ my %pretty_form = (
   '#' => '\\#',
 );
 
-sub pretty { # adopted from Class::Classless
+sub pretty (@stuff) { # adopted from Class::Classless
   # Not the most brilliant routine, but passable.
   # Don't give it a cyclic data structure!
-  my @stuff = @_; # copy
   my $x;
   my $out =
     # join ",\n" .
@@ -2107,8 +2086,7 @@ sub pretty { # adopted from Class::Classless
 # backward compatibility in Pod::Man, etc. but not recommended for
 # general use.
 
-sub reinit {
-  my $self = shift;
+sub reinit ($self) {
   foreach (qw(source_dead source_filename doc_has_started
 start_of_pod_block content_seen last_was_blank paras curr_open
 line_count pod_para_count in_pod ~tried_gen_errata errata errors_seen
