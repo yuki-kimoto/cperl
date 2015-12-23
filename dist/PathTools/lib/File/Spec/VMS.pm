@@ -435,12 +435,10 @@ Attempt to convert an absolute file specification to a relative specification.
 
 =cut
 
-sub abs2rel {
-    my $self = shift;
-    return vmspath(File::Spec::Unix::abs2rel( $self, @_ ))
-        if ((grep m{/}, @_) && !(grep m{(?<!\^)[\[<:]}, @_));
+sub abs2rel ($self, str $path, $base?) {
+    return vmspath(File::Spec::Unix::abs2rel( $self, $path, $base ))
+        if ((grep m{/}, $path, $base) && !(grep m{(?<!\^)[\[<:]}, $path, $base));
 
-    my($path,$base) = @_;
     $base = $self->_cwd() unless defined $base and length $base;
 
     # If there is no device or directory syntax on $base, make sure it
