@@ -480,7 +480,6 @@ SKIP:
 }
 
 # Test [perl #61222]
-if (0)
 {
     local $ENV{PERLDB_OPTS};
     my $wrapper = DebugWrap->new(
