@@ -2309,7 +2309,7 @@ S_deb_padvar(pTHX_ PADOFFSET off, int n, bool paren)
 
 static void
 S_append_padvar(pTHX_ PADOFFSET off, CV *cv, SV *out, int n,
-        bool paren, bool is_scalar)
+        bool paren, char force_sigil)
 {
     PADNAMELIST *namepad = NULL;
     int i;
@@ -2340,8 +2340,8 @@ S_append_padvar(pTHX_ PADOFFSET off, CV *cv, SV *out, int n,
             cur = SvCUR(out);
             Perl_sv_catpvf(aTHX_ out, "%"UTF8f,
                            UTF8fARG(1, PadnameLEN(pn), PadnamePV(pn)));
-            if (is_scalar)
-                SvPVX(out)[cur] = '$';
+            if (force_sigil)
+                SvPVX(out)[cur] = force_sigil;
         }
         else
             Perl_sv_catpvf(aTHX_ out, "[%"UVuf"]", (UV)(off+i));
@@ -2420,7 +2420,7 @@ Perl_multideref_stringify(pTHX_ const OP *o, CV *cv)
             /* FALLTHROUGH */
         case MDEREF_AV_padav_aelem:
             derefs = 1;
-            S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, 1);
+            S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, '$');
             goto do_elem;
             NOT_REACHED; /* NOTREACHED */
 
@@ -2449,7 +2449,7 @@ Perl_multideref_stringify(pTHX_ const OP *o, CV *cv)
             is_hash = TRUE;
             /* FALLTHROUGH */
         case MDEREF_AV_padsv_vivify_rv2av_aelem:
-            S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, 1);
+            S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, '$');
             goto do_vivify_rv2xv_elem;
             NOT_REACHED; /* NOTREACHED */
 
@@ -2492,7 +2492,7 @@ Perl_multideref_stringify(pTHX_ const OP *o, CV *cv)
                     Perl_sv_catpvf(aTHX_ out, "%"IVdf, (++items)->iv);
                 break;
             case MDEREF_INDEX_padsv:
-                S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, 1);
+                S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, '$');
                 break;
             case MDEREF_INDEX_gvsv:
                 items++;
@@ -2581,7 +2581,7 @@ Perl_signature_stringify(pTHX_ const OP *o, CV *cv)
             else {
                 if (actions & SIGNATURE_FLAG_ref)
                     sv_catpvs_nomg(out, "\\");
-                S_append_padvar(aTHX_ pad_ix++, cv, out, 1, 0, 1);
+                S_append_padvar(aTHX_ pad_ix++, cv, out, 1, 0, '$');
             }
 
             switch (action) {
@@ -2608,7 +2608,7 @@ Perl_signature_stringify(pTHX_ const OP *o, CV *cv)
                 break;
             case SIGNATURE_arg_default_padsv:
                 sv_catpvs_nomg(out, "=");
-                S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, 1);
+                S_append_padvar(aTHX_ (++items)->pad_offset, cv, out, 1, 0, '$');
                 break;
             case SIGNATURE_arg_default_gvsv:
                 sv_catpvs_nomg(out, "=");
@@ -2638,11 +2638,13 @@ Perl_signature_stringify(pTHX_ const OP *o, CV *cv)
                 first = FALSE;
             else
                 sv_catpvs_nomg(out, ", ");
-
+            if (actions & SIGNATURE_FLAG_ref)
+                sv_catpvs_nomg(out, "\\");
             if (actions & SIGNATURE_FLAG_skip)
                 sv_catpvn_nomg(out, action == SIGNATURE_array ? "@": "%", 1);
             else
-                S_append_padvar(aTHX_ pad_ix++, cv, out, 1, 0, 0);
+                S_append_padvar(aTHX_ pad_ix++, cv, out, 1, 0,
+                                action == SIGNATURE_array ? '@': '%');
             break;
 
         default:
