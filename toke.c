@@ -8519,7 +8519,7 @@ S_pending_ident(pTHX)
                 GCC_DIAG_RESTORE;
             }
 
-            pl_yylval.opval = newOP(OP_PADANY, 0); /* rurban 2015: this op leaks! */
+            pl_yylval.opval = newOP(OP_PADANY, 0); /* rurban 2015: this op leaks #94 */
             pl_yylval.opval->op_targ = allocmy(PL_tokenbuf, tokenbuf_len,
                                                         UTF ? SVf_UTF8 : 0);
 	    return PRIVATEREF;
@@ -8542,7 +8542,8 @@ S_pending_ident(pTHX)
 		HEK * const stashname = HvNAME_HEK(stash);
 		SV *  const sym = newSVhek(stashname);
                 sv_catpvs(sym, "::");
-                sv_catpvn_flags(sym, PL_tokenbuf+1, tokenbuf_len - 1, (UTF ? SV_CATUTF8 : SV_CATBYTES ));
+                sv_catpvn_flags(sym, PL_tokenbuf+1, tokenbuf_len - 1,
+                                (UTF ? SV_CATUTF8 : SV_CATBYTES ));
                 pl_yylval.opval = (OP*)newSVOP(OP_CONST, 0, sym);
                 pl_yylval.opval->op_private = OPpCONST_ENTERED;
                 if (pit != '&')
@@ -11839,7 +11840,7 @@ S_lex_token_boundary(pTHX)
  */
 
 static PADOFFSET
-S_parse_opt_lexvar(pTHX)
+S_parse_opt_lexvar(pTHX_ bool is_ref)
 {
     I32 sigil, c;
     char *s, *d;
@@ -11860,6 +11861,9 @@ S_parse_opt_lexvar(pTHX)
     PL_bufptr = s;
     if (d == PL_tokenbuf+1)
 	return NOT_IN_PAD;
+    if (is_ref && (sigil == '@' || sigil == '%')) {
+        PL_tokenbuf[0] = '$';
+    }
     return allocmy(PL_tokenbuf, d - PL_tokenbuf, UTF ? SVf_UTF8 : 0);
 }
 
@@ -12072,7 +12076,7 @@ Perl_parse_subsignature(pTHX)
                 is_ref = FALSE;
             }
 
-            pad_offset = S_parse_opt_lexvar(aTHX);
+            pad_offset = S_parse_opt_lexvar(aTHX_ is_ref);
             is_var = (pad_offset != NOT_IN_PAD);
 
             if (is_var) {
@@ -12131,7 +12135,7 @@ Perl_parse_subsignature(pTHX)
                     if (is_ref) {
                         if (sigil == '@')      action = SIGNATURE_array;
                         else if (sigil == '%') action = SIGNATURE_hash;
-                        action |= SIGNATURE_FLAG_ref;
+                        /*action |= SIGNATURE_FLAG_ref;*/
                     }
                     prev_type = 0;
                     mand_args++;
@@ -12362,7 +12366,7 @@ Perl_parse_subsignature(pTHX)
 
     /* Sig parsing complete. Set param counts in items[1] */
 
-    if (mand_args + opt_args >= (1<<15))
+    if (UNLIKELY(mand_args + opt_args >= (1<<15)))
         qerror(Perl_mess(aTHX_
                     "Subroutine signature has more than %d parameters",
                     (int)((1<<15)-1) ));
@@ -12370,7 +12374,7 @@ Perl_parse_subsignature(pTHX)
         st.items[1].uv =
             (mand_args << 16) | opt_args | ((slurpy ? 1 : 0) << 15);
 
-    if (st.items_ix < st.items_size) {
+    if (LIKELY(st.items_ix < st.items_size)) {
         /* copy to new allocation of exact size */
         UNOP_AUX_item *new_items = (UNOP_AUX_item*)PerlMemShared_malloc(
                                         sizeof(UNOP_AUX_item) * st.items_ix);
