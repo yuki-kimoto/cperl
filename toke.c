@@ -12154,6 +12154,7 @@ Perl_parse_subsignature(pTHX)
                     SvPAD_TYPED_on(pn);
                     PadnameTYPE_set(pn,
                         MUTABLE_HV(SvREFCNT_inc_simple_NN(MUTABLE_SV(typestash))));
+                    typestash = NULL;
                 }
                 /* at the first pad var, or after there are too
                  * many vars for a single SAVEt_CLEARPADRANGE,
