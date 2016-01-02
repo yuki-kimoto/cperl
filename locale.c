@@ -803,6 +803,11 @@ Perl_init_i18nl10n(pTHX_ int printwarn)
         }
 
 #ifdef LC_ALL
+        /* On darwin/osx we might want to free this return value or
+           suppress the valgrind warning, but not elsewhere. POSIX
+           standard forbids it, valgrind detects this upstream
+           problem.  See
+           e.g. https://stackoverflow.com/questions/29116354/should-i-free-the-pointer-returned-by-setlocale */
         if (! my_setlocale(LC_ALL, trial_locale)) {
             setlocale_failure = TRUE;
         }
