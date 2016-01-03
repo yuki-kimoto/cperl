@@ -13,6 +13,7 @@ use vars qw($VERSION @ISA $PACKAGE @EXPORT_OK
 @ISA = qw(Exporter Math::BigInt);
 
 $VERSION = '0.36c';
+$VERSION =~ s/c$//;
 
 use overload;	# inherit overload from BigInt
 

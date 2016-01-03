@@ -87,6 +87,7 @@ BEGIN {
 }
 
 our $VERSION = '1.36c';
+$VERSION =~ s/c$//;
 
 our $MaxEvalLen = 0;
 our $Verbose    = 0;

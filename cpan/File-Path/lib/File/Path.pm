@@ -18,7 +18,7 @@ BEGIN {
 use Exporter ();
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 our $VERSION = '3.09c'; #modernized
-$VERSION   = 3.09;
+$VERSION =~ s/c$//;
 @ISA       = qw(Exporter);
 @EXPORT    = qw(mkpath rmtree);
 @EXPORT_OK = qw(make_path remove_tree);

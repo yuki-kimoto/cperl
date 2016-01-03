@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 
 our $VERSION = '0.73_02c';
+$VERSION =~ s/c$//;
 
 require XSLoader;
 

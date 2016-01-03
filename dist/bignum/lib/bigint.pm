@@ -2,6 +2,7 @@ package bigint;
 use 5.006;
 
 $VERSION = '0.39c';
+$VERSION =~ s/c$//;
 use Exporter;
 @ISA		= qw( Exporter );
 @EXPORT_OK	= qw( PI e bpi bexp hex oct );
