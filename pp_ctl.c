@@ -2802,7 +2802,7 @@ PP(pp_goto)
 	    SAVETMPS;
 	    SAVEFREESV(cv); /* later, undo the 'avoid premature free' hack */
 	    if (CvISXSUB(cv) || CvHASSIG(cv)) {
-		SV **newsp;
+		SV **newsp;	/* both (un)used by POPBLOCK */
 		I32 gimme;
 		const SSize_t items = arg ? AvFILL(arg) + 1 : 0;
 		const bool magical = arg ? cBOOL(SvRMAGICAL(arg)) : 0;
@@ -2836,11 +2836,13 @@ PP(pp_goto)
 		SvREFCNT_dec(arg);
                 if (CvHASSIG(cv)) {
                     PADLIST * const padlist = CvPADLIST(cv);
-                    cx->blk_sub.argarray = (AV*)(MARK+1);
+                    cx->blk_sub.argarray  = (AV*)(MARK+1);
                     cx->blk_sub.savearray = (AV*)SP;
+                    /* with signatures we do a real tailcall. without new stackframe,
+                       reusing the old pads */
                     /*cx->blk_sub.cv = cv; already done above */
+#if 1
                     cx->blk_sub.olddepth = CvDEPTH(cv);
-
                     CvDEPTH(cv)++; /* not really a tailcall. new stackframe */
                     if (CvDEPTH(cv) < 2)
                         SvREFCNT_inc_simple_void_NN(cv);
@@ -2850,8 +2852,10 @@ PP(pp_goto)
                         pad_push(padlist, CvDEPTH(cv));
                     }
                     PL_curcop = cx->blk_oldcop;
-                    SAVECOMPPAD();
-                    PAD_SET_CUR_NOSAVE(padlist, CvDEPTH(cv));
+                    PAD_SET_CUR(padlist, CvDEPTH(cv));
+#else
+                    PAD_SET_CUR(padlist, CvDEPTH(cv)+1);
+#endif
                     goto call_pp_sub;
                 }
 		if (CxTYPE(cx) == CXt_SUB && CxHASARGS(cx)) {
