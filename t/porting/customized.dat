@@ -1,4 +1,4 @@
-CPAN cpan/CPAN/lib/CPAN.pm ce62c43d72f101c011184dbbc59e21c2790826f0
+CPAN cpan/CPAN/lib/CPAN.pm 5c49baf112b34ab2d5852290317d0bed8e00c7ef
 Devel::PPPort cpan/Devel-PPPort/PPPort_pm.PL e5b06df14ab4162956415f4208fe209d01b7c000
 Devel::PPPort cpan/Devel-PPPort/PPPort_xs.PL f03c10f3a2e58312ee632771400a9a26ade7af45
 Digest::MD5 cpan/Digest-MD5/MD5.xs c92dd84381f7ca0425284eabdb7b5dad9682164b
@@ -9,7 +9,7 @@ ExtUtils::CBuilder dist/ExtUtils-CBuilder/t/03-cplusplus.t c01ba6e7a872c8a7fc26e
 ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/Command/MM.pm 7f4dfd0fe884bd42412bcf04ca80ef97b39c1d54
 ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/Liblist.pm bef099988b15fb0b2a1f5ac48c01af1f7f36d329
 ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/Liblist/Kid.pm 8168e18f0e3ce3ece4bb7e7c72d57ec07c67c402
-ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/MakeMaker.pm 23ccd04ba9cb74da1309480f0fcebd46765cfed6
+ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/MakeMaker.pm 9423eabdeac659a33ba204104bbaa07208d65f9c
 ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/MakeMaker/Config.pm f8db8d4245bf0684b8210c811f50d7cfb1a27d78
 ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/MakeMaker/FAQ.pod 757bffb47857521311f8f3bde43ebe165f8d5191
 ExtUtils::MakeMaker cpan/ExtUtils-MakeMaker/lib/ExtUtils/MakeMaker/Locale.pm 82be06851deb84c6419ad003ce9b6d1957f395f3
