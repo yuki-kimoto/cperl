@@ -479,7 +479,7 @@ SKIP:
     }
 }
 
-# Test [perl #61222]
+# Test [perl #61222] - hangs with sigs+types
 {
     local $ENV{PERLDB_OPTS};
     my $wrapper = DebugWrap->new(
