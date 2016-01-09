@@ -3403,7 +3403,10 @@ PP(pp_entersub)
                     MARK++;
                 }
             }
-	}
+	} else if (CvHASSIG(cv)) { /* mark argc==0 */
+            cx->blk_sub.argarray  = (AV*)(MARK+1);
+            cx->blk_sub.savearray = (AV*)SP;
+        }
 	SAVETMPS;
 	if (UNLIKELY((cx->blk_u16 & OPpENTERSUB_LVAL_MASK) == OPpLVAL_INTRO &&
 	    !CvLVALUE(cv)))
