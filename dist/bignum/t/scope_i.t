@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Test::More tests => 10;
+my int $skip = 2;
 
 # no :hex and :oct means these do not get overloaded for older Perls:
 use bigint;
@@ -17,7 +18,7 @@ isnt(ref(0x20), '', 'is in effect');
 
 SKIP: {
     # Quote version number due to "use bigint;"
-    skip('Need at least Perl v5.9.4', 2) if $] < "5.009004";
+    skip('Need at least Perl v5.9.4', $skip) if $] < "5.009004";
 
     is (ref(hex(9)), 'Math::BigInt', 'hex is overloaded');
     is (ref(oct(07)), 'Math::BigInt', 'oct is overloaded');
