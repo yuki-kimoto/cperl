@@ -18,7 +18,7 @@ SKIP: {
 
   is (ref(hex(9)), 'Math::BigInt', 'hex is overloaded');
   is (ref(oct(07)), 'Math::BigInt', 'oct is overloaded');
-  }
+}
 
 {
   no bigint;
