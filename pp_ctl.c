@@ -1983,13 +1983,17 @@ PP(pp_dbstate)
 	    PUSHBLOCK(cx, CXt_SUB, SP);
 	    PUSHSUB_DB(cx);
 	    cx->blk_sub.retop = PL_op->op_next;
-	    CvDEPTH(cv)++;
-	    if (CvDEPTH(cv) >= 2) {
-		PERL_STACK_OVERFLOW_CHECK();
-		pad_push(CvPADLIST(cv), CvDEPTH(cv));
-	    }
-	    SAVECOMPPAD();
-	    PAD_SET_CUR_NOSAVE(CvPADLIST(cv), CvDEPTH(cv));
+            CvDEPTH(cv)++;
+            if (CvDEPTH(cv) >= 2) {
+                PERL_STACK_OVERFLOW_CHECK();
+                pad_push(CvPADLIST(cv), CvDEPTH(cv));
+            }
+            PAD_SET_CUR(CvPADLIST(cv), CvDEPTH(cv));
+            if (CvHASSIG(cv)) {
+                dMARK;
+                cx->blk_sub.argarray  = (AV*)(MARK+1);
+                cx->blk_sub.savearray = (AV*)SP;
+            }
 	    RETURNOP(CvSTART(cv));
 	}
     }
