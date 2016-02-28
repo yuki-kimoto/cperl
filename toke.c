@@ -12406,7 +12406,7 @@ Perl_parse_subsignature(pTHX)
         OP* left = scalar(newOP(OP_PADSV, OPf_MOD|OPf_REF|OPf_SPECIAL
                                          |(OPpLVAL_INTRO<<8)));
         OP* right = newUNOP(OP_SHIFT, 0,
-                            newUNOP(OP_RV2AV, 0, newGVOP(OP_GV, 0, PL_defgv)));
+                        newUNOP(OP_RV2AV, 0, newGVOP(OP_GV, 0, PL_defgv)));
         left->op_targ = allocmy("$self", 5, 0);
         initops = op_append_list(OP_LINESEQ, initops,
                       newSTATEOP(0, NULL,
@@ -12515,8 +12515,16 @@ Perl_parse_subsignature(pTHX)
                                         : SIGNATURE_hash;
             }
             else {
+                if (c == ':') {
+                    if (pos || !var)
+                        qerror(Perl_mess(aTHX_ "Invocant parameter not first"));
+                    if (!initops)
+                        qerror(Perl_mess(aTHX_ "Invocant parameter only for methods"));
+                    op_free(initops);
+                    initops = NULL;
+                }
                 /* scalar */
-                if (c != '=' && c != '?') {
+                else if (c != '=' && c != '?') {
                     /* mandatory arg */
                     if (prev_type == 1)
                         qerror(Perl_mess(aTHX_ "Mandatory parameter "
