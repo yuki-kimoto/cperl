@@ -1657,6 +1657,7 @@ sub B::UNOP_AUX::save {
   my $sym = objsym($op);
   return $sym if defined $sym;
   $level = 0 unless $level;
+  # TODO Bizarre copy of CODE in list assignment with sigs
   my @aux_list = $op->name eq 'multideref'
     ? $op->aux_list_thr # GH#283, GH#341
     : $op->aux_list;
