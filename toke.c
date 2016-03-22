@@ -9331,9 +9331,12 @@ S_scan_ident(pTHX_ char *s, char *dest, STRLEN destlen, I32 ck_uni)
             if (s < PL_bufend && isSPACE(*s)) {
                 s = skipspace(s);
             }
-	    if ((*s == '[' || (*s == '{' && strNE(dest, "sub")))) {
+	    if ((*s == '['
+             || (*s == '{' && strNE(dest, "sub")))) {
                 /* ${foo[0]} and ${foo{bar}} notation.  */
-		if (ckWARN(WARN_AMBIGUOUS) && keyword(dest, d - dest, 0)) {
+		if (ckWARN(WARN_AMBIGUOUS) && keyword(dest, d - dest, 0)
+                    && strNE(dest, "class"))
+                {
 		    const char * const brack =
 			(const char *)
 			((*s == '[') ? "[...]" : "{...}");
@@ -9381,6 +9384,7 @@ S_scan_ident(pTHX_ char *s, char *dest, STRLEN destlen, I32 ck_uni)
 	    }
 	    if (PL_lex_state == LEX_NORMAL) {
 		if (ckWARN(WARN_AMBIGUOUS)
+                    && strNE(dest, "class")
                     && (keyword(dest, d - dest, 0)
 		        || get_cvn_flags(dest, d - dest, is_utf8
                            ? SVf_UTF8
