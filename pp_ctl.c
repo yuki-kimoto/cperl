@@ -2880,7 +2880,10 @@ PP(pp_goto)
 		if (CxTYPE(cx) == CXt_SUB && CxHASARGS(cx)) {
 		    /* Restore old @_ */
 		    arg = GvAV(PL_defgv);
-		    GvAV(PL_defgv) = cx->blk_sub.savearray;
+                    if (SvTYPE(cx->blk_sub.savearray) == SVt_PVAV)
+                        GvAV(PL_defgv) = cx->blk_sub.savearray;
+                    else
+                        GvAV(PL_defgv) = NULL;
 		    SvREFCNT_dec(arg);
 		}
 		retop = cx->blk_sub.retop;
@@ -2907,7 +2910,7 @@ PP(pp_goto)
 		    pad_push(padlist, CvDEPTH(cv));
 		}
 		PL_curcop = cx->blk_oldcop;
-		SAVECOMPPAD();
+                SAVECOMPPAD();
 		PAD_SET_CUR_NOSAVE(padlist, CvDEPTH(cv));
 		if (CxHASARGS(cx))
 		{
@@ -2929,10 +2932,12 @@ PP(pp_goto)
 		    if (arg != GvAV(PL_defgv)) {
 			AV * const av = GvAV(PL_defgv);
 			GvAV(PL_defgv) = (AV *)SvREFCNT_inc_simple(arg);
-			SvREFCNT_dec(av);
+                        SvREFCNT_dec(av);
 		    }
 		}
-		else SvREFCNT_dec(arg);
+		else {
+                    SvREFCNT_dec(arg);
+                }
             call_pp_sub:
 		if (PERLDB_SUB) {	/* Checking curstash breaks DProf. */
 		    get_db_sub(NULL, cv);
