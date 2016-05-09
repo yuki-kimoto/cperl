@@ -259,7 +259,7 @@ ext/dynaloader/dynaloader.pod	Verbatim line length including indents exceeds 79 
 ext/file-find/lib/file/find.pm	Verbatim line length including indents exceeds 79 by	1
 ext/file-glob/glob.pm	Verbatim line length including indents exceeds 79 by	15
 ext/hash-util/lib/hash/util.pm	Verbatim line length including indents exceeds 79 by	2
-ext/opcode/opcode.pm	Verbatim line length including indents exceeds 79 by	2
+ext/opcode/opcode.pm	Verbatim line length including indents exceeds 79 by	1
 ext/pod-html/testdir/perlpodspec-copy.pod	Verbatim line length including indents exceeds 79 by	8
 ext/pod-html/testdir/perlvar-copy.pod	? Should you be using L<...> instead of	3
 ext/pod-html/testdir/perlvar-copy.pod	Verbatim line length including indents exceeds 79 by	6
@@ -288,7 +288,7 @@ pod/perlcall.pod	Verbatim line length including indents exceeds 79 by	2
 pod/perlce.pod	Verbatim line length including indents exceeds 79 by	3
 pod/perlcperl.pod	? Should you be using F<...> or maybe L<...> instead of	2
 pod/perlcperl.pod	Apparent broken link	2
-pod/perlcperl.pod	Verbatim line length including indents exceeds 79 by	13
+pod/perlcperl.pod	Verbatim line length including indents exceeds 79 by	11
 pod/perlcygwin.pod	Verbatim line length including indents exceeds 79 by	24
 pod/perldebguts.pod	Verbatim line length including indents exceeds 79 by	34
 pod/perldebtut.pod	Verbatim line length including indents exceeds 79 by	22
@@ -349,5 +349,6 @@ lib/benchmark.pm	Verbatim line length including indents exceeds 79 by	2
 lib/config.pod	? Should you be using L<...> instead of	-1
 lib/cperl.pm	Pod NAME already used	1
 lib/extutils/embed.pm	Verbatim line length including indents exceeds 79 by	2
+lib/fakesigs.pm	Apparent broken link	2
 lib/perl5db.pl	? Should you be using L<...> instead of	1
 lib/pod/text/overstrike.pm	Verbatim line length including indents exceeds 79 by	1

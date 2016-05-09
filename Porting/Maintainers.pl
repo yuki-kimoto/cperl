@@ -1650,6 +1650,7 @@ use File::Glob qw(:case);
                 lib/deprecate.pm
                 lib/diagnostics.{pm,t}
                 lib/dumpvar.{pl,t}
+                lib/fakesigs.{pm,t}
                 lib/feature.{pm,t}
                 lib/feature/
                 lib/filetest.{pm,t}
