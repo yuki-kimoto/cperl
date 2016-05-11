@@ -7129,7 +7129,7 @@ extern void moncontrol(int);
    not as in perl5 pp or python.
    Without new cx (stack trace) and recursion padframe (CvDEPTH padlist copy),
    reusing the old pads. */
-#define PERL_GOTOSIG_TAILCALL
+/*#define PERL_GOTOSIG_TAILCALL*/
 
 /*
 

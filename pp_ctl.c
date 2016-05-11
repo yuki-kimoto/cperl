@@ -2860,7 +2860,7 @@ PP(pp_goto)
                         if (depth == PERL_SUB_DEPTH_WARN && ckWARN(WARN_RECURSION))
                             sub_crush_depth(cv);
                         if (!CvISXSUB(cv))
-                            pad_push(padlist, CvDEPTH(cv));
+                            pad_push(padlist, depth);
                     }
 #else
                     SvREFCNT_inc_simple_void_NN(cv);
@@ -2868,12 +2868,14 @@ PP(pp_goto)
                     PL_curcop = cx->blk_oldcop;
                     if (!CvISXSUB(cv)) {
 #ifdef PERL_GOTOSIG_TAILCALL
-                        depth = PadlistMAX(padlist);
+                        /* cpan/Test-Simple/t/capture.t? should be max-1 */
+                        depth = CvDEPTH(cv); /*PadlistMAX(padlist);*/
 #endif
+                        assert(CvDEPTH(cv) <= PadlistMAX(padlist));
                         PAD_SET_CUR(padlist, depth);
-                        DEBUG_kv(PerlIO_printf(Perl_debug_log,
-                            "  padlist max=%d, depth=%d\n",
-                            (int)PadlistMAX(padlist), depth));
+                        DEBUG_Xv(PerlIO_printf(Perl_debug_log,
+                            "  padlist max=%d, CvDEPTH=%d\n",
+                            (int)PadlistMAX(padlist), CvDEPTH(cv)));
                         goto call_pp_sub;
                     }
                 }
