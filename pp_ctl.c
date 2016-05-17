@@ -2852,8 +2852,17 @@ PP(pp_goto)
                     cx->blk_sub.savearray = (AV*)SP;
                     cx->blk_sub.olddepth = depth;
 #ifndef PERL_GOTOSIG_TAILCALL
-                    CvDEPTH(cv)++; /* not really a tailcall. new stackframe */
-                    depth++;
+                    if (depth < PadlistMAX(padlist)+1) {
+                        CvDEPTH(cv)++; /* not really a tailcall. new stackframe */
+                        depth++;
+                        DEBUG_Xv(PerlIO_printf(Perl_debug_log,
+                                               "  padlist max=%d, ++depth=%d\n",
+                                               (int)PadlistMAX(padlist), depth));
+                    } else { /* someone already bumped depth. keep padl.max */
+                        DEBUG_Xv(PerlIO_printf(Perl_debug_log,
+                                               "  padlist max=%d, depth=%d\n",
+                                               (int)PadlistMAX(padlist), depth));
+                    }
                     if (depth < 2)
                         SvREFCNT_inc_simple_void_NN(cv);
                     else {
