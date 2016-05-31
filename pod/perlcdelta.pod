@@ -13,14 +13,6 @@ release and the cperl 5.25.1 development releases.
 
 XXX Any important notices here
 
-=head1 Security
-
-XXX Any security-related notices go here.  In particular, any security
-vulnerabilities closed should be noted here rather than in the
-L</Selected Bug Fixes> section.
-
-[ List each security issue as a =head2 entry ]
-
 =head1 Performance Enhancements
 
 XXX Changes which enhance performance without changing behaviour go here.
@@ -179,13 +171,17 @@ XXX Changes which affect the interface available to C<XS> code go here.  Other
 significant internal changes for future core maintainers should be noted as
 well.
 
-[ List each change as a =item entry ]
-
 =over 4
 
-=item *
+=item * ck_negate
 
 XXX
+
+=item * Added exact_arith pragma
+
+Promote on overflow to bigint/num as in perl6, do not loose precision
+with all builtin arithmetic operators.
+L<[cperl #21]|https://github.com/perl11/cperl/issues/21>
 
 =back
 
