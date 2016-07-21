@@ -38,7 +38,7 @@
 #      define EXTCONST EXTERN_C const
 #      define dEXTCONST const
 #    else
-#      define EXT
+#      define EXT __attribute__used__
 #      define dEXT
 #      define EXTCONST const
 #      define dEXTCONST const
