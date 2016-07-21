@@ -5605,6 +5605,7 @@ modules supporting older perls.
 =cut
 */
 
+__attribute__used__
 SV *
 Perl_newSV(pTHX_ const STRLEN len)
 {
@@ -9168,6 +9169,7 @@ See also C<L</sv_mortalcopy>> and C<L</sv_2mortal>>.
 =cut
 */
 
+__attribute__used__
 SV *
 Perl_sv_newmortal(pTHX)
 {
@@ -9241,6 +9243,7 @@ C<L</sv_newmortal>> and C<L</sv_mortalcopy>>.
 =cut
 */
 
+__attribute__used__
 SV *
 Perl_sv_2mortal(pTHX_ SV *const sv)
 {
@@ -9268,6 +9271,7 @@ For efficiency, consider using C<newSVpvn> instead.
 =cut
 */
 
+__attribute__used__
 SV *
 Perl_newSVpv(pTHX_ const char *const s, const STRLEN len)
 {
@@ -9291,6 +9295,7 @@ undefined.
 =cut
 */
 
+__attribute__used__
 SV *
 Perl_newSVpvn(pTHX_ const char *const buffer, const STRLEN len)
 {
@@ -9433,6 +9438,7 @@ string/length pair.
 =cut
 */
 
+__attribute__used__
 SV *
 Perl_newSVpv_share(pTHX_ const char *src, U32 hash)
 {

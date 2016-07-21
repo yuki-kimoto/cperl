@@ -9517,6 +9517,7 @@ static storage, as it is used directly as CvFILE(), without a copy being made.
 =cut
 */
 
+__attribute__used__
 CV *
 Perl_newXS(pTHX_ const char *name, XSUBADDR_t subaddr, const char *filename)
 {
@@ -9526,6 +9527,7 @@ Perl_newXS(pTHX_ const char *name, XSUBADDR_t subaddr, const char *filename)
     );
 }
 
+__attribute__used__
 CV *
 Perl_newXS_flags(pTHX_ const char *name, XSUBADDR_t subaddr,
 		 const char *const filename, const char *const proto,
@@ -9537,6 +9539,7 @@ Perl_newXS_flags(pTHX_ const char *name, XSUBADDR_t subaddr,
     );
 }
 
+__attribute__used__
 CV *
 Perl_newXS_deffile(pTHX_ const char *name, XSUBADDR_t subaddr)
 {

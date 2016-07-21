@@ -2662,6 +2662,7 @@ Uses C<strlen> to get the length of C<name>, then calls C<get_cvn_flags>.
 =cut
 */
 
+__attribute__used__
 CV*
 Perl_get_cvn_flags(pTHX_ const char *name, STRLEN len, I32 flags)
 {
@@ -2682,6 +2683,7 @@ Perl_get_cvn_flags(pTHX_ const char *name, STRLEN len, I32 flags)
 
 /* Nothing in core calls this now, but we can't replace it with a macro and
    move it to mathoms.c as a macro would evaluate name twice.  */
+__attribute__used__
 CV*
 Perl_get_cv(pTHX_ const char *name, I32 flags)
 {
@@ -2707,6 +2709,7 @@ Approximate Perl equivalent: C<&{"$sub_name"}(@$argv)>.
 =cut
 */
 
+__attribute__used__
 I32
 Perl_call_argv(pTHX_ const char *sub_name, I32 flags, char **argv)
 
@@ -2734,6 +2737,7 @@ Performs a callback to the specified Perl sub.  See L<perlcall>.
 =cut
 */
 
+__attribute__used__
 I32
 Perl_call_pv(pTHX_ const char *sub_name, I32 flags)
               		/* name of the subroutine */
@@ -2753,6 +2757,7 @@ be on the stack.  See L<perlcall>.
 =cut
 */
 
+__attribute__used__
 I32
 Perl_call_method(pTHX_ const char *methname, I32 flags)
                		/* name of the subroutine */
@@ -5273,6 +5278,7 @@ read_e_script(pTHX_ int idx, SV *buf_sv, int maxlen)
 }
 
 /* removes boilerplate code at the end of each boot_Module xsub */
+__attribute__used__
 void
 Perl_xs_boot_epilog(pTHX_ const I32 ax)
 {
