@@ -7778,7 +7778,7 @@ Perl_newWHILEOP(pTHX_ I32 flags, I32 debuggable PERL_UNUSED_DECL, LOOP *loop,
     if (cont) {
 	next = LINKLIST(cont);
     }
-    if (expr) {
+    if (expr /*&& expr->op_type != OP_ITER*/) {
 	OP * const unstack = newOP(OP_UNSTACK, 0);
 	if (!next)
 	    next = unstack;
@@ -7792,14 +7792,24 @@ Perl_newWHILEOP(pTHX_ I32 flags, I32 debuggable PERL_UNUSED_DECL, LOOP *loop,
 
     if (expr) {
 	scalar(listop);
-	o = new_logop(OP_AND, 0, &expr, &listop);
-	if (o == expr && o->op_type == OP_CONST && !SvTRUE(cSVOPo->op_sv)) {
-	    op_free((OP*)loop);
-	    return expr;		/* listop already freed by new_logop */
-	}
-	if (listop)
-	    ((LISTOP*)listop)->op_last->op_next =
-		(o == listop ? redo : LINKLIST(o));
+        if (expr->op_type != OP_ITER) {
+            o = new_logop(OP_AND, 0, &expr, &listop);
+            if (o == expr && o->op_type == OP_CONST && !SvTRUE(cSVOPo->op_sv)) {
+                op_free((OP*)loop);
+                return expr;		/* listop already freed by new_logop */
+            }
+            if (listop)
+                ((LISTOP*)listop)->op_last->op_next =
+                    (o == listop ? redo : LINKLIST(o));
+        } else {
+            assert(listop);
+            o = expr;
+            op_free(cUNOPo->op_first); /* the temp. stub */
+            cUNOPo->op_first = listop; /* yes */
+            if (listop)
+                ((LISTOP*)listop)->op_last->op_next =
+                    (o == listop ? redo : o);
+        }
     }
     else
 	o = listop;
@@ -7817,8 +7827,11 @@ Perl_newWHILEOP(pTHX_ I32 flags, I32 debuggable PERL_UNUSED_DECL, LOOP *loop,
     loop->op_lastop = o;
     o->op_private |= loopflags;
 
-    if (next)
+    if (next) {
 	loop->op_nextop = next;
+        if (expr->op_type == OP_ITER)
+            expr->op_next = o;
+    }
     else
 	loop->op_nextop = o;
 
@@ -7992,7 +8005,7 @@ Perl_newFOROP(pTHX_ I32 flags, OP *sv, OP *expr, OP *block, OP *cont)
 #endif
     }
     loop->op_targ = padoff;
-    wop = newWHILEOP(flags, 1, loop, newOP(optype, 0), block, cont, 0);
+    wop = newWHILEOP(flags, 1, loop, newUNOP(optype, 0), block, cont, 0);
     return wop;
 }
 
